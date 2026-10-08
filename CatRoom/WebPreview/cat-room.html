@@ -1,0 +1,1217 @@
+<meta charset="utf-8">
+<title>Cozy Cat Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&family=Mali:wght@600;700&display=swap">
+<style>
+/* Layout: full-bleed 3D diorama with a floating toy-like HUD; panels are paper cards with chunky "pressable" buttons. */
+:root {
+  --sky: #c7dbfa;
+  --paper: #fffaf0;
+  --paper-2: #f8ead6;
+  --ink: #553a2e;
+  --ink-soft: #8a6a5a;
+  --orange: #ffa154;
+  --green: #74cc7a;
+  --pink: #ff8fae;
+  --blue: #73b3f5;
+  --purple: #b294f2;
+  --gold: #ffc733;
+  --gray: #c9bfb6;
+  --shadow: rgba(102, 64, 51, .28);
+  --display: "Mali", "Kanit", system-ui, sans-serif;
+  --body: "Kanit", system-ui, sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--sky); color: var(--ink); font-family: var(--body); overflow: hidden;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#fx { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+#ui { position: fixed; inset: 0; pointer-events: none; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+#ui > * { pointer-events: auto; }
+
+button { font-family: var(--body); color: #fff; border: 0; cursor: pointer; border-radius: 16px; padding: 8px 14px; font-size: 16px;
+  background: var(--c, var(--orange)); box-shadow: 0 4px 0 var(--shadow); text-shadow: 0 1px 0 rgba(85,58,46,.45);
+  transition: transform .08s, box-shadow .08s, filter .15s; line-height: 1.15; }
+button:hover { filter: brightness(1.05); }
+button:active { transform: translateY(3px) scale(.97); box-shadow: 0 1px 0 var(--shadow); }
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+button:disabled { --c: var(--gray); cursor: default; filter: none; }
+button.ghost { --c: var(--paper-2); color: var(--ink); text-shadow: none; }
+
+.pill { display: flex; align-items: center; gap: 6px; background: var(--paper); border-radius: 999px; padding: 4px 14px 4px 6px;
+  box-shadow: 0 4px 0 var(--shadow); font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill svg { width: 28px; height: 28px; flex: none; }
+#hud { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 12px; display: flex; gap: 8px; flex-wrap: wrap; max-width: calc(100% - 130px); }
+#settingsBtn { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; --c: var(--purple); }
+
+#bottom { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); display: flex; gap: 12px; }
+.big { width: 112px; height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 4px 6px 8px; font-size: 17px; border-radius: 22px; }
+.big img { width: 62px; height: 62px; object-fit: contain; pointer-events: none; }
+#strayBtn { position: absolute; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); --c: var(--pink); font-size: 17px; animation: wiggle 1.2s ease-in-out infinite; }
+@keyframes wiggle { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-3deg) scale(1.04); } 75% { transform: rotate(3deg) scale(1.04); } }
+
+.toast { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 70px); transform: translateX(-50%); background: rgba(85,58,46,.93);
+  color: #fff; border-radius: 16px; padding: 10px 18px; font-size: 16px; max-width: min(560px, calc(100% - 40px)); text-align: center; pointer-events: none;
+  animation: pop .25s ease-out; }
+@keyframes pop { from { transform: translateX(-50%) scale(.85); opacity: 0; } }
+
+.modalBg { position: absolute; inset: 0; background: rgba(64, 38, 30, .45); display: flex; align-items: center; justify-content: center; padding: 14px; }
+.card { background: var(--paper); border-radius: 26px; box-shadow: 0 6px 0 var(--shadow); padding: 16px 18px; position: relative; animation: cardIn .22s ease-out;
+  max-height: calc(100% - 20px); display: flex; flex-direction: column; min-width: 0; }
+@keyframes cardIn { from { transform: scale(.88); opacity: .3; } }
+.card h2 { font-family: var(--display); font-size: 26px; margin: 0 52px 10px 4px; text-wrap: balance; }
+.close { position: absolute; top: 12px; right: 12px; --c: var(--pink); width: 42px; height: 42px; padding: 0; font-size: 18px; }
+
+.shop { width: min(980px, 100%); height: min(640px, 100%); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tabs button { --c: #d8c4b2; font-size: 15px; padding: 7px 12px; }
+.tabs button.on { --c: var(--orange); }
+.coinBox { position: absolute; right: 66px; top: 16px; }
+.grid { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 4px 4px 10px; flex: 1; min-height: 0; }
+.item { background: #fff; border-radius: 18px; box-shadow: 0 3px 0 var(--shadow); padding: 8px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+.item .ic { background: #fff3e2; border-radius: 14px; height: 108px; display: flex; align-items: center; justify-content: center; }
+.item .ic img { width: 100px; height: 100px; object-fit: contain; }
+.item b { font-weight: 500; font-size: 16px; line-height: 1.2; }
+.item small { color: var(--ink-soft); font-size: 13px; line-height: 1.25; min-height: 34px; }
+.item button { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 16px; }
+.badge { position: absolute; top: 6px; right: 6px; background: var(--orange); color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 13px; }
+.coin { width: 20px; height: 20px; flex: none; }
+
+#catPanel { position: absolute; right: 12px; top: 50%; transform: translateY(-46%); width: 330px; padding: 14px 16px; gap: 6px; }
+#catPanel .head { display: flex; gap: 10px; align-items: center; }
+#catPanel .head img { width: 74px; height: 74px; background: #ffeedd; border-radius: 50%; object-fit: contain; }
+#catPanel .name { font-family: var(--display); font-size: 24px; line-height: 1.1; }
+#catPanel .breed, #catPanel .status, #catPanel .extra { color: var(--ink-soft); font-size: 14px; }
+.stat { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px; font-size: 14px; }
+.bar { height: 16px; background: #eedfd0; border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; background: var(--c); transition: width .3s; }
+.stats { display: grid; gap: 5px; }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+.actions button { padding: 10px 4px; }
+#adoptBtn { --c: var(--green); font-size: 20px; padding: 10px; animation: wiggle 1.4s ease-in-out infinite; }
+#renameBtn { --c: var(--purple); font-size: 14px; }
+
+#decor { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); max-width: 1000px; margin: 0 auto; padding: 10px 14px; gap: 8px; }
+#decor .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#decor .top h2 { margin: 0; font-size: 22px; }
+#decor .hint { color: var(--ink-soft); font-size: 14px; flex: 1; min-width: 160px; }
+#decor .bag { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; }
+.bagItem { --c: #fff; color: var(--ink); text-shadow: none; width: 104px; flex: none; display: flex; flex-direction: column; align-items: center; padding: 4px; position: relative; font-size: 13px; }
+.bagItem img { width: 76px; height: 76px; object-fit: contain; }
+#decor .acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 6px 0; }
+#decor .acts button { min-width: 110px; padding: 12px; font-size: 17px; }
+
+.food { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; background: #fff; border-radius: 16px; padding: 6px 10px; box-shadow: 0 3px 0 var(--shadow); }
+.food img { width: 70px; height: 70px; object-fit: contain; }
+.food small { color: var(--ink-soft); display: block; font-size: 13px; }
+.list { display: grid; gap: 8px; overflow-y: auto; min-height: 0; padding: 2px 2px 8px; }
+.popup { width: min(460px, 100%); text-align: center; align-items: center; gap: 8px; }
+.popup p { white-space: pre-line; margin: 4px 0 8px; line-height: 1.45; color: var(--ink-soft); }
+.popup img { width: 120px; height: 120px; object-fit: contain; }
+.popup .row { display: flex; gap: 10px; justify-content: center; }
+.popup .row button { min-width: 120px; padding: 11px; font-size: 18px; }
+.catCard { --c: #fff; color: var(--ink); text-shadow: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px; }
+.catCard img { width: 96px; height: 96px; object-fit: contain; }
+
+/* floating world labels */
+.bubble { position: absolute; transform: translate(-50%, -100%); pointer-events: auto; display: flex; align-items: center; gap: 4px; background: #fff7dc;
+  color: var(--ink); text-shadow: none; padding: 3px 10px 3px 4px; font-size: 17px; border-radius: 99px; animation: bob 1.4s ease-in-out infinite; }
+@keyframes bob { 50% { margin-top: -5px; } }
+.thought { position: absolute; transform: translate(-10%, -100%); width: 44px; height: 44px; background: #fff; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; box-shadow: 0 3px 0 var(--shadow); font-family: var(--display); color: var(--blue); }
+.thought img { width: 38px; height: 38px; object-fit: contain; }
+.trust { position: absolute; transform: translate(-50%, -100%); width: 92px; display: flex; gap: 4px; align-items: center; background: rgba(255,255,255,.92);
+  border-radius: 99px; padding: 3px 8px 3px 4px; box-shadow: 0 3px 0 var(--shadow); }
+.trust .bar { flex: 1; height: 10px; }
+.tag { position: absolute; transform: translate(-50%, -100%); font-family: var(--display); font-size: 17px; color: #fff; white-space: nowrap;
+  text-shadow: 0 2px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink); }
+.heart, .floatText { position: absolute; transform: translate(-50%, -50%); }
+.floatText { font-family: var(--display); font-size: 22px; color: var(--gold); text-shadow: 0 2px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink); white-space: nowrap; }
+
+#loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 22px; background: var(--sky); }
+
+@media (max-width: 720px), (orientation: portrait) {
+  #catPanel { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); transform: none; }
+  .stats { grid-template-columns: 1fr 1fr; column-gap: 12px; }
+  .stat { grid-template-columns: 64px 1fr; font-size: 13px; }
+  #hud { flex-direction: column; align-items: flex-start; }
+  .big { width: 96px; height: 88px; font-size: 15px; }
+  .big img { width: 54px; height: 54px; }
+  #strayBtn { right: 50%; transform: translateX(50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 112px); animation: none; }
+  .card h2 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div id="stage"></div>
+<div id="fx"></div>
+<div id="ui"></div>
+<div id="loading">กำลังโหลด… Loading…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   Cozy Cat Room — browser preview of the Unity game (same design & numbers)
+   ===================================================================== */
+const ROOM = 8, MARGIN = 0.35, MAX_CATS = 6, SAVE_KEY = "cozy-cat-room-v1";
+
+// ---------------- Localization ----------------
+let LANG = "th";
+const L = {
+  shop: ["ร้านค้า", "Shop"], decorate: ["ตกแต่ง", "Decorate"], my_cats: ["แมวของฉัน", "My Cats"], settings: ["ตั้งค่า", "Settings"],
+  comfort: ["สบาย {0} (x{1})", "Comfort {0} (x{1})"], stray_visit: ["แมวจรมาเยี่ยม!", "A stray is here!"],
+  stray_arrived: ["มีแมวจรแวะมาที่ประตู! ลองให้อาหารหรือเล่นด้วยดูสิ", "A stray cat came to the door! Try feeding or playing with it."],
+  stray_left: ["แมวจรเดินจากไปแล้ว... ครั้งหน้าลองหาอาหารที่มันชอบนะ", "The stray wandered off... Next time, find its favorite food!"],
+  stray_cat: ["แมวจร", "Stray Cat"], stray_loves_food: ["เมี๊ยว~ ของโปรดเลย! ความไว้ใจเพิ่มขึ้นสองเท่า", "Meow~ its favorite! Trust doubled."],
+  tab_furniture: ["เฟอร์นิเจอร์", "Furniture"], tab_toys: ["ของเล่น", "Toys"], tab_food: ["อาหาร", "Food"], tab_wall: ["วอลเปเปอร์", "Wallpaper"], tab_floor: ["พื้นห้อง", "Flooring"],
+  use: ["ใช้", "Use"], in_use: ["ใช้อยู่", "In use"], owned_n: ["มี {0}", "x{0}"], comfort_plus: ["ความสบาย +{0}", "Comfort +{0}"],
+  not_enough: ["เหรียญไม่พอ! ดูแลแมวให้มีความสุขเพื่อหาเหรียญเพิ่มนะ", "Not enough coins! Keep your cats happy to earn more."],
+  bought: ["ซื้อ {0} แล้ว!", "Bought {0}!"], bought_place: ["ซื้อ {0} แล้ว! กด \"ตกแต่ง\" เพื่อวางในห้อง", "Bought {0}! Tap \"Decorate\" to place it."],
+  bought_theme: ["เปลี่ยนเป็น {0} แล้ว!", "Switched to {0}!"],
+  decor_title: ["โหมดตกแต่ง", "Decorating"], decor_hint: ["เลือกของจากกระเป๋า หรือแตะของในห้องเพื่อย้าย", "Pick an item from your bag, or tap one in the room to move it."],
+  decor_place_hint: ["แตะหรือลากบนพื้นเพื่อวาง (สีเขียว = วางได้)", "Tap or drag on the floor to place (green = OK)."],
+  rotate: ["หมุน", "Rotate"], store: ["เก็บเข้ากระเป๋า", "Store"], place_here: ["วางตรงนี้", "Place"], cancel: ["ยกเลิก", "Cancel"], done: ["เสร็จ", "Done"],
+  buy_more: ["ซื้อเพิ่ม", "Buy more"], bag_empty: ["กระเป๋าว่าง ไปซื้อของที่ร้านค้ากัน!", "Your bag is empty. Visit the shop!"],
+  hunger: ["อิ่มท้อง", "Fullness"], fun: ["สนุก", "Fun"], energy: ["พลังงาน", "Energy"], happiness: ["ความสุข", "Happiness"], trust: ["ไว้ใจ", "Trust"],
+  feed: ["ให้อาหาร", "Feed"], pet: ["ลูบหัว", "Pet"], play: ["เล่นด้วย", "Play"], adopt: ["รับเลี้ยง!", "Adopt!"], rename: ["เปลี่ยนชื่อ", "Rename"],
+  likes: ["ของโปรด: {0}", "Favorite: {0}"], likes_unknown: ["ของโปรด: ??? (ลองให้อาหารหลาย ๆ แบบ)", "Favorite: ??? (try different foods)"],
+  stay_time: ["จะอยู่อีก {0}", "Leaving in {0}"], adopt_ready: ["ไว้ใจเราแล้ว! รับมาเลี้ยงได้เลย", "It trusts you now! You can adopt it."],
+  earning: ["ความสุข {0}% = ยิ่งสุขยิ่งได้เหรียญ", "Happiness {0}% = more coins"], room_full: ["ห้องเต็มแล้ว (เลี้ยงได้สูงสุด {0} ตัว)", "The room is full (max {0} cats)."],
+  adopted_title: ["ยินดีด้วย!", "Congratulations!"], adopted_body: ["{0} มาเป็นสมาชิกใหม่ของบ้านแล้ว\nดูแลให้มีความสุขนะ", "{0} is now part of the family.\nTake good care of it!"],
+  adopt_hint: ["แมวจรจะแวะมาเป็นระยะ ทำให้มันไว้ใจเพื่อรับมาเลี้ยง", "Strays visit from time to time. Earn their trust to adopt them."],
+  my_cats_title: ["แมวของฉัน ({0}/{1})", "My Cats ({0}/{1})"],
+  st_sleep: ["หลับปุ๋ย Zzz", "Sleeping Zzz"], st_eat: ["กินอย่างเอร็ดอร่อย", "Munching happily"], st_purr: ["ครืดคราด~ มีความสุข", "Purring~"],
+  st_play: ["เล่นสนุกสุด ๆ", "Having fun"], st_hiss: ["ขู่ฟ่อ! ยังไม่ไว้ใจ", "Hiss! Not ready yet"], st_using: ["อยู่กับ{0}", "Enjoying the {0}"],
+  st_walk: ["เดินเล่น", "Strolling"], st_wants_home: ["อยากอยู่ด้วยแล้ว!", "Wants to stay!"], st_shy: ["ยังเขินอาย", "Still shy"], st_relax: ["ชิลล์ ๆ", "Chilling"],
+  res_full: ["{0} อิ่มแล้วจ้า", "{0} is full."], res_cooldown: ["ใจเย็น ๆ นะ รอแป๊บนึง", "Easy! Wait a moment."],
+  res_tired: ["{0} เหนื่อยแล้ว ให้พักก่อนนะ", "{0} is too tired. Let it rest."], res_busy: ["รอสักครู่", "Just a moment."],
+  res_hiss: ["ฟ่อ! {0} ยังกลัวอยู่ ลองให้อาหารก่อนนะ", "Hiss! The {0} is still scared. Try food first."],
+  choose_food: ["เลือกอาหาร", "Choose food"], give: ["ให้", "Give"], buy_give: ["ซื้อให้", "Buy"], favorite: ["[ของโปรด!]", "[Favorite!]"],
+  yay: ["เย้!", "Yay!"], lets_go: ["เริ่มเลย!", "Let's go!"], close: ["ปิด", "Close"], yes: ["ใช่", "Yes"], no: ["ไม่", "No"],
+  welcome_back: ["ยินดีต้อนรับกลับ!", "Welcome back!"], welcome_body: ["ระหว่างที่คุณไม่อยู่ ({1})\nแมว ๆ หาเหรียญได้ {0} เหรียญ!", "While you were away ({1})\nyour cats earned {0} coins!"],
+  tutorial_title: ["ยินดีต้อนรับสู่ห้องแมวเหมียว!", "Welcome to Cozy Cat Room!"],
+  tutorial_body: ["แตะที่แมวเพื่อให้อาหาร ลูบหัว และเล่นด้วย\nแมวที่มีความสุขจะให้เหรียญ แตะเหรียญเพื่อรับ x2!\nใช้เหรียญซื้อของแต่งห้อง อาหาร และของเล่น\nแมวจรจะแวะมา ทำให้มันไว้ใจแล้วรับมาเลี้ยงได้",
+    "Tap a cat to feed, pet and play with it.\nHappy cats drop coins. Tap them for x2!\nSpend coins on furniture, food and toys.\nStray cats will visit. Earn their trust to adopt them."],
+  dur_h_m: ["{0} ชม. {1} นาที", "{0}h {1}m"], dur_m: ["{0} นาที", "{0} min"],
+  settings_title: ["ตั้งค่า", "Settings"], language_toggle: ["ภาษา: ไทย  ›  English", "Language: English  ›  ไทย"],
+  sound_on: ["เสียง: เปิด", "Sound: On"], sound_off: ["เสียง: ปิด", "Sound: Off"], reset: ["เริ่มเกมใหม่", "Start over"],
+  reset_confirm: ["ลบข้อมูลทั้งหมดแล้วเริ่มใหม่ใช่ไหม?\n(ย้อนกลับไม่ได้)", "Delete all progress and start over?\n(This cannot be undone.)"],
+  preview_note: ["เวอร์ชันทดลองบนเว็บ (Unity ตัวจริงอยู่ใน repo)", "Web preview build (the Unity game is in the repo)"],
+};
+const T = k => (L[k] ? L[k][LANG === "th" ? 0 : 1] : k);
+const F = (k, ...a) => T(k).replace(/\{(\d)\}/g, (_, i) => a[i]);
+
+// ---------------- Items ----------------
+const C = h => new THREE.Color(h);
+const ITEMS = [];
+function item(o) { o.w = o.w || 1; o.d = o.d || 1; o.useTime = o.useTime || 8; ITEMS.push(o); return o; }
+item({ id: "bed_basic", th: "เบาะนอนแมว", en: "Cat Cushion", dth: "เบาะนุ่ม ๆ ให้แมวงีบ", den: "A soft cushion for naps", cat: "furniture", price: 60, comfort: 2, use: "sleep", useHeight: .12, useTime: 14, energyRate: 3.5 });
+item({ id: "bed_donut", th: "ที่นอนโดนัท", en: "Donut Bed", dth: "นอนสบายกว่า ฟื้นพลังเร็ว", den: "Extra cozy, restores energy fast", cat: "furniture", price: 180, comfort: 5, use: "sleep", useHeight: .14, useTime: 16, energyRate: 6, funRate: .3 });
+item({ id: "box", th: "กล่องกระดาษ", en: "Cardboard Box", dth: "ถูกแต่แมวรักที่สุด!", den: "Cheap, but cats love it!", cat: "furniture", price: 20, comfort: 1, use: "play", useHeight: .08, useTime: 9, funRate: 2.2, energyRate: 1 });
+item({ id: "food_bowl", th: "ชามอาหาร", en: "Food Bowl", dth: "แมวจะมากินอาหารที่ชาม", den: "Cats come here to eat", cat: "furniture", price: 40, comfort: 1, use: "bowl" });
+item({ id: "scratch_post", th: "เสาลับเล็บ", en: "Scratching Post", dth: "ลับเล็บให้หายเครียด", den: "Scratch the stress away", cat: "furniture", price: 80, comfort: 2, use: "scratch", useTime: 7, funRate: 3.5, energyRate: -.5 });
+item({ id: "cat_tree", th: "คอนโดแมว", en: "Cat Tree", dth: "ปีนป่ายและนอนบนที่สูง", den: "Climb high and nap on top", cat: "furniture", price: 350, comfort: 8, use: "climb", useHeight: 1.62, useTime: 14, funRate: 2.5, energyRate: 2.5 });
+item({ id: "sofa", th: "โซฟา", en: "Sofa", dth: "ที่นั่งแสนสบายของทุกคน", den: "A comfy seat for everyone", cat: "furniture", price: 220, w: 2, comfort: 6, use: "sit", useHeight: .5, useTime: 12, energyRate: 2.5, funRate: .5 });
+item({ id: "plant", th: "ต้นไม้กระถาง", en: "Potted Plant", dth: "เพิ่มความสดชื่นให้ห้อง", den: "Freshens up the room", cat: "furniture", price: 50, comfort: 3 });
+item({ id: "lamp", th: "โคมไฟตั้งพื้น", en: "Floor Lamp", dth: "แสงอุ่น ๆ ชวนผ่อนคลาย", den: "Warm, relaxing light", cat: "furniture", price: 70, comfort: 3 });
+item({ id: "bookshelf", th: "ชั้นหนังสือ", en: "Bookshelf", dth: "แมวชอบนั่งดูจากที่สูง", den: "Cats like to watch from up high", cat: "furniture", price: 150, w: 2, comfort: 4, use: "watch", useHeight: 1.42, useTime: 10, funRate: 1.5, energyRate: 1 });
+item({ id: "fish_tank", th: "ตู้ปลา", en: "Fish Tank", dth: "ดูปลาว่ายได้ทั้งวัน", den: "Fish-watching all day long", cat: "furniture", price: 400, comfort: 10, use: "watch", useTime: 12, funRate: 3 });
+item({ id: "rug_round", th: "พรมกลม", en: "Round Rug", dth: "วางของทับได้ แมวชอบกลิ้ง", den: "Furniture can go on top", cat: "furniture", price: 90, w: 2, d: 2, flat: true, comfort: 4 });
+item({ id: "rug_fish", th: "พรมลายปลา", en: "Fish Rug", dth: "พรมรูปปลาตัวโต", den: "A big fish-shaped rug", cat: "furniture", price: 120, w: 2, flat: true, comfort: 4 });
+item({ id: "toy_ball", th: "ลูกบอลไหมพรม", en: "Yarn Ball", dth: "กลิ้งไปกลิ้งมาสนุกสุด ๆ", den: "Roll it around!", cat: "toy", price: 25, comfort: 1, use: "play", useTime: 7, funRate: 3, energyRate: -.6 });
+item({ id: "toy_mouse", th: "หนูของเล่น", en: "Toy Mouse", dth: "ล่าเหยื่อแบบปลอดภัย", den: "Safe hunting practice", cat: "toy", price: 35, comfort: 1, use: "play", useTime: 7, funRate: 3.5, energyRate: -.6 });
+item({ id: "toy_tunnel", th: "อุโมงค์แมว", en: "Cat Tunnel", dth: "มุดเข้ามุดออกไม่เบื่อ", den: "In and out, never bored", cat: "toy", price: 120, w: 2, comfort: 3, use: "play", useTime: 9, funRate: 4, energyRate: -.4 });
+item({ id: "toy_wand", th: "ไม้ตกแมว", en: "Feather Wand", dth: "ขนนกพลิ้ว ๆ ล่อแมว", den: "Fluttery feather teaser", cat: "toy", price: 60, comfort: 2, use: "play", useTime: 8, funRate: 4.5, energyRate: -.8 });
+item({ id: "food_dry", th: "อาหารเม็ด", en: "Dry Food", dth: "อิ่ม +35", den: "Fullness +35", cat: "food", price: 10, hungerGain: 35, funGain: 0, trustGain: 12 });
+item({ id: "food_wet", th: "อาหารเปียก", en: "Wet Food", dth: "อิ่ม +50 สนุก +5", den: "Fullness +50, Fun +5", cat: "food", price: 20, hungerGain: 50, funGain: 5, trustGain: 16 });
+item({ id: "food_fish", th: "ปลาทู", en: "Mackerel", dth: "อิ่ม +60 สนุก +10", den: "Fullness +60, Fun +10", cat: "food", price: 30, hungerGain: 60, funGain: 10, trustGain: 20 });
+item({ id: "food_treat", th: "ขนมแมวเลีย", en: "Lickable Treat", dth: "อิ่ม +15 สนุก +25", den: "Fullness +15, Fun +25", cat: "food", price: 15, hungerGain: 15, funGain: 25, trustGain: 18 });
+function theme(id, th, en, cat, price, a, b, pattern) {
+  item({ id, th, en, dth: cat === "wall" ? "เปลี่ยนลายผนังห้อง" : "เปลี่ยนพื้นห้อง", den: cat === "wall" ? "Change the walls" : "Change the floor", cat, price, a, b, pattern });
+}
+theme("wall_cream", "วอลเปเปอร์ครีม", "Cream Wallpaper", "wall", 0, "#ffedd1", "#fae0c2", 0);
+theme("wall_mint", "ลายทางมินต์", "Mint Stripes", "wall", 100, "#c7f2e0", "#a8e3cc", 1);
+theme("wall_pink", "จุดชมพู", "Pink Polka", "wall", 120, "#ffd9e0", "#fff7fa", 2);
+theme("wall_sky", "ฟ้าลายตาราง", "Sky Plaid", "wall", 150, "#c7e0ff", "#a8c9f7", 3);
+theme("wall_lemon", "ลายทางเลมอน", "Lemon Stripes", "wall", 150, "#fff5b3", "#ffe68c", 1);
+theme("floor_wood", "พื้นไม้", "Wood Floor", "floor", 0, "#dea873", "#c78f5e", 0);
+theme("floor_checker", "กระเบื้องหมากรุก", "Checker Tiles", "floor", 150, "#fff7eb", "#fab8a8", 1);
+theme("floor_carpet", "พรมขนนุ่ม", "Fluffy Carpet", "floor", 120, "#ccbdf2", "#bdade6", 2);
+theme("floor_tatami", "เสื่อทาทามิ", "Tatami Mats", "floor", 200, "#d6d999", "#998052", 3);
+const ITEM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+const iname = d => (LANG === "th" ? d.th : d.en), idesc = d => (LANG === "th" ? d.dth : d.den);
+const placeable = d => d.cat === "furniture" || d.cat === "toy";
+const isTheme = d => d.cat === "wall" || d.cat === "floor";
+
+// ---------------- Cat presets & names ----------------
+const AMBER = "#fabf33", GREEN = "#73d161", BLUE = "#599efa";
+function P(th, en, body, head, legs, tail, tip, muzzle, eyeL, eyeR, patch, weight) { return { th, en, body, head, legs, tail, tip, muzzle, ears: tail, eyeL, eyeR, patch, weight }; }
+const PRESETS = [
+  P("ส้ม", "Orange", "#ffa84d", "#ffa84d", "#ffebd1", "#f28c38", "#ffebd1", "#fff2e0", AMBER, AMBER, null, 10),
+  P("เทาลายเสือ", "Gray Tabby", "#a8a8b3", "#9999a6", "#d9d9e0", "#737380", "#595966", "#f2f2f2", GREEN, GREEN, null, 10),
+  P("ดำ", "Black", "#33303b", "#33303b", "#33303b", "#33303b", "#33303b", "#47454f", AMBER, AMBER, null, 8),
+  P("ทักซิโด้", "Tuxedo", "#383540", "#383540", "#ffffff", "#383540", "#ffffff", "#ffffff", GREEN, GREEN, null, 8),
+  P("สามสี", "Calico", "#fffaf2", "#fffaf2", "#fffaf2", "#40383d", "#fa9e47", "#ffffff", AMBER, AMBER, "#fa9e47", 7),
+  P("วิเชียรมาศ", "Siamese", "#faedd1", "#faedd1", "#5c4238", "#5c4238", "#4d362e", "#6b4f42", BLUE, BLUE, null, 4),
+  P("สีสวาด (โคราช)", "Korat", "#8f9eb8", "#8f9eb8", "#8f9eb8", "#808fa8", "#9eadc7", "#a8b8cc", GREEN, GREEN, null, 3),
+  P("ขาวมณี", "Khao Manee", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", "#ffffff", BLUE, AMBER, null, 2),
+  P("ครีม", "Cream", "#ffe0b3", "#ffe0b3", "#fff2db", "#f5cc99", "#fff2db", "#fff7eb", AMBER, AMBER, null, 7),
+];
+const NAMES = [["มะลิ","Mali"],["ส้มโอ","Pomelo"],["ขนมปัง","Bun"],["โมจิ","Mochi"],["ถั่วแดง","Red Bean"],["ทองหยิบ","Thong Yip"],["ลูกชิ้น","Meatball"],["ข้าวปั้น","Onigiri"],["นมสด","Milky"],["เต้าหู้","Tofu"],["มะม่วง","Mango"],["ชาไทย","Thai Tea"],["บราวนี่","Brownie"],["คุกกี้","Cookie"],["ซูชิ","Sushi"],["พุดดิ้ง","Pudding"],["ลาเต้","Latte"],["งาดำ","Sesame"],["ข้าวเหนียว","Sticky Rice"],["ทาร์ต","Tart"],["ขนมชั้น","Layer Cake"],["เมฆ","Cloud"],["ถุงเท้า","Socks"],["ปุยฝ้าย","Cotton"],["ทับทิม","Ruby"]];
+const catName = i => NAMES[Math.max(0, Math.min(NAMES.length - 1, i))][LANG === "th" ? 0 : 1];
+const presetName = i => (LANG === "th" ? PRESETS[i].th : PRESETS[i].en);
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const uid = () => Math.random().toString(36).slice(2, 10);
+function randomPreset() { let tot = PRESETS.reduce((s, p) => s + p.weight, 0), r = Math.random() * tot; for (let i = 0; i < PRESETS.length; i++) { r -= PRESETS[i].weight; if (r < 0) return i; } return 0; }
+
+// ---------------- Save ----------------
+function newSave() {
+  return { coins: 150, lifetimeCoins: 0, wallpaper: "wall_cream", flooring: "floor_wood",
+    placed: [{ id: "bed_basic", x: 5, z: 6, rot: 0 }, { id: "food_bowl", x: 2, z: 6, rot: 0 }, { id: "rug_round", x: 3, z: 3, rot: 0 }, { id: "toy_ball", x: 4, z: 4, rot: 0 }],
+    inventory: { food_dry: 5, food_treat: 1, plant: 1 }, ownedThemes: ["wall_cream", "floor_wood"],
+    cats: [{ uid: uid(), nameIndex: 0, preset: 0, size: 1, hunger: 80, fun: 80, energy: 80, affection: 60, favoriteFood: "food_fish", posX: 4, posZ: 4 }],
+    adoptedCount: 0, lastSave: 0, language: null, soundOn: true, tutorialDone: false };
+}
+function loadSave() {
+  try { const hot = window.claude?.hot?.data?.save; if (hot) return JSON.parse(hot); } catch (e) {}
+  try { const s = localStorage.getItem(SAVE_KEY); if (s) { const d = JSON.parse(s); if (d && d.cats && d.cats.length) return d; } } catch (e) {}
+  return null;
+}
+let S = loadSave() || newSave();
+let saveDirty = false, saveTimer = 0;
+function saveNow() {
+  S.placed = room.items.map(i => ({ id: i.def.id, x: i.x, z: i.z, rot: i.rot }));
+  for (const c of cats) { c.d.posX = c.root.position.x; c.d.posZ = c.root.position.z; }
+  S.lastSave = Date.now();
+  saveDirty = false; saveTimer = 0;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+}
+window.claude?.hot?.snapshot?.(() => { try { saveNow(); } catch (e) {} return { save: JSON.stringify(S) }; });
+
+// ---------------- Three.js setup ----------------
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#c7dbfa");
+const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 100);
+const FOCUS = new THREE.Vector3(3.6, 1.2, 4.4);
+let zoom = 1;
+const CAM_DIR = new THREE.Vector3(18.37, 15, -18.37);
+
+const hemi = new THREE.HemisphereLight("#fff6ea", "#b8aee0", 0.55); scene.add(hemi);
+const sun = new THREE.DirectionalLight("#fff4e6", 0.75);
+sun.position.set(4 + 4.6, 15.8, 4 - 11.4); sun.target.position.set(4, 0, 4);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
+sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02;
+scene.add(sun); scene.add(sun.target);
+
+function resize() {
+  const w = stage.clientWidth || innerWidth, h = stage.clientHeight || innerHeight;
+  renderer.setSize(w, h, false);
+  const aspect = Math.max(0.3, w / h), portrait = h > w;
+  const size = Math.max(5.6, (portrait ? 6.0 : 6.6) / aspect) * zoom;
+  Object.assign(camera, { left: -size * aspect, right: size * aspect, top: size, bottom: -size });
+  camera.updateProjectionMatrix();
+  const f = FOCUS.clone().add(new THREE.Vector3(0, portrait ? -1.6 : -0.3, 0));
+  camera.position.copy(f).add(CAM_DIR); camera.lookAt(f);
+}
+addEventListener("resize", resize);
+
+// ---------------- Materials & primitives ----------------
+const gradTex = (() => { const d = new Uint8Array([120, 120, 120, 255, 255, 255]); const t = new THREE.DataTexture(d, 2, 1, THREE.RGBFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const matCache = new Map();
+function toon(color, emissive = 0) {
+  const key = color + "|" + emissive;
+  if (matCache.has(key)) return matCache.get(key);
+  const c = new THREE.Color(color);
+  const m = new THREE.MeshToonMaterial({ color: c, gradientMap: gradTex });
+  if (emissive) { m.emissive = c.clone(); m.emissiveIntensity = emissive; }
+  matCache.set(key, m); return m;
+}
+const outlineCache = new Map();
+function outlineMat(w) {
+  if (outlineCache.has(w)) return outlineCache.get(w);
+  const m = new THREE.ShaderMaterial({
+    uniforms: { w: { value: w }, color: { value: new THREE.Color("#4d3329") } }, side: THREE.BackSide,
+    vertexShader: "uniform float w; void main(){ vec3 n = normalize(mat3(modelMatrix) * normal); vec4 wp = modelMatrix * vec4(position,1.0); wp.xyz += n * w; gl_Position = projectionMatrix * viewMatrix * wp; }",
+    fragmentShader: "uniform vec3 color; void main(){ gl_FragColor = vec4(color,1.0); }",
+  });
+  outlineCache.set(w, m); return m;
+}
+const GEO = {
+  sphere: new THREE.SphereGeometry(0.5, 22, 16),
+  box: new THREE.BoxGeometry(1, 1, 1),
+  cyl: new THREE.CylinderGeometry(0.5, 0.5, 2, 22),
+  cone: new THREE.ConeGeometry(0.5, 1, 10).translate(0, 0.5, 0),
+  torus: new THREE.TorusGeometry(0.5, 0.18, 12, 26).rotateX(Math.PI / 2),
+};
+const D2R = Math.PI / 180;
+function setEuler(o, e) { if (e) o.rotation.set(e[0] * D2R, e[1] * D2R, e[2] * D2R, "YXZ"); }
+function prim(type, parent, pos, scale, color, outline = false, euler = null, ow = 0.015, emissive = 0) {
+  const m = new THREE.Mesh(GEO[type], typeof color === "object" && color.isMaterial ? color : toon(color, emissive));
+  m.position.set(...pos); m.scale.set(...(Array.isArray(scale) ? scale : [scale, scale, scale])); setEuler(m, euler);
+  m.castShadow = true; m.receiveShadow = true;
+  if (outline) { const o = new THREE.Mesh(GEO[type], outlineMat(ow)); o.userData.outline = true; m.add(o); }
+  parent.add(m); return m;
+}
+function pivot(parent, pos, euler) { const g = new THREE.Group(); g.position.set(...pos); setEuler(g, euler); parent.add(g); return g; }
+const mul = (hex, k) => "#" + new THREE.Color(hex).multiplyScalar(k).getHexString();
+
+// ---------------- Procedural textures ----------------
+function patternTex(def, isWall) {
+  const S2 = 128, cv = document.createElement("canvas"); cv.width = cv.height = S2; const g = cv.getContext("2d");
+  const A = def.a, B = def.b; g.fillStyle = A; g.fillRect(0, 0, S2, S2);
+  if (isWall) {
+    if (def.pattern === 1) { g.fillStyle = B; for (let x = 0; x < S2; x += 32) g.fillRect(x + 16, 0, 16, S2); }
+    else if (def.pattern === 2) { g.fillStyle = B; for (let y = 0; y < S2; y += 32) for (let x = 0; x < S2; x += 32) { g.beginPath(); g.arc(x + 16, y + 16, 5, 0, 7); g.fill(); g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); } }
+    else if (def.pattern === 3) { g.fillStyle = B; for (let i = 0; i < S2; i += 64) { g.fillRect(i, 0, 16, S2); g.fillRect(0, i, S2, 16); } }
+    else { g.globalAlpha = .25; g.fillStyle = B; for (let x = 0; x < S2; x += 8) g.fillRect(x, 0, 3, S2); }
+  } else {
+    if (def.pattern === 1) { g.fillStyle = B; g.fillRect(64, 0, 64, 64); g.fillRect(0, 64, 64, 64); }
+    else if (def.pattern === 2) { g.globalAlpha = .35; g.fillStyle = B; for (let i = 0; i < 900; i++) g.fillRect(Math.random() * S2, Math.random() * S2, 3, 3); }
+    else if (def.pattern === 3) { g.fillStyle = B; g.fillRect(0, 0, S2, 4); g.fillRect(0, 64, S2, 4); g.fillRect(0, 0, 4, S2); g.globalAlpha = .12; for (let y = 6; y < S2; y += 3) g.fillRect(0, y, S2, 1); }
+    else { g.fillStyle = B; for (let p = 0; p < 4; p++) { const y = p * 32, off = (p % 2) * 48; g.fillRect(0, y, S2, 2); g.fillRect((off) % 96, y, 2, 32); g.fillRect((off + 96) % 128, y, 2, 32); g.globalAlpha = .18; g.fillRect(0, y + 10 + p * 2, S2, 1); g.fillRect(0, y + 22, S2, 1); g.globalAlpha = 1; } }
+  }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+}
+
+// ---------------- Item models ----------------
+const WOOD = "#c78c59", DARKWOOD = "#8c5c3d", ROPE = "#edd199", CREAM = "#fff5e0";
+const MODELS = {
+  bed_basic(t) { const p = "#ffb8c2"; prim("cyl", t, [0, .05, 0], [.82, .05, .82], mul(p, .92), true); prim("torus", t, [0, .12, 0], [.8, .55, .8], p, true); prim("cyl", t, [0, .1, 0], [.6, .03, .6], "#ffe6eb"); },
+  bed_donut(t) { prim("torus", t, [0, .16, 0], [.95, .9, .95], "#db9a5c", true); prim("torus", t, [0, .22, 0], [.93, .6, .93], "#ff94bf", true); prim("cyl", t, [0, .08, 0], [.62, .05, .62], CREAM);
+    const sp = ["#ffffff", "#80d9ff", "#fff266", "#99f299"]; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; prim("box", t, [Math.cos(a) * .47, .33, Math.sin(a) * .47], [.07, .025, .025], sp[i % 4], false, [0, i * 47, 0]); } },
+  box(t) { const c = "#dba86e", s = .72, h = .36; prim("box", t, [0, .02, 0], [s, .04, s], mul(c, .9));
+    prim("box", t, [0, h / 2, -s / 2], [s, h, .04], c, true, null, .01); prim("box", t, [0, h / 2, s / 2], [s, h, .04], c, true, null, .01);
+    prim("box", t, [-s / 2, h / 2, 0], [.04, h, s], c, true, null, .01); prim("box", t, [s / 2, h / 2, 0], [.04, h, s], c, true, null, .01);
+    prim("box", t, [0, h + .08, -s / 2 - .1], [s, .03, .26], "#e3b074", true, [-50, 0, 0], .01); prim("box", t, [0, h + .08, s / 2 + .1], [s, .03, .26], "#e3b074", true, [50, 0, 0], .01); },
+  food_bowl(t) { prim("cyl", t, [0, .06, 0], [.42, .06, .42], "#8cbfff", true, null, .012); prim("cyl", t, [0, .1, 0], [.32, .03, .32], "#b87342"); prim("sphere", t, [.05, .13, .02], [.12, .05, .12], "#cc854d"); },
+  scratch_post(t) { const cp = "#b89ee6"; prim("box", t, [0, .05, 0], [.7, .1, .7], cp, true, null, .012); prim("cyl", t, [0, .55, 0], [.2, .45, .2], ROPE, true, null, .012);
+    for (let i = 0; i < 5; i++) prim("cyl", t, [0, .2 + i * .17, 0], [.21, .008, .21], mul(ROPE, .85)); prim("cyl", t, [0, 1.02, 0], [.42, .03, .42], cp, true, null, .012);
+    prim("cyl", t, [.17, .88, -.05], [.008, .12, .008], "#fff"); prim("sphere", t, [.17, .74, -.05], .1, "#ff8099", true, null, .008); },
+  cat_tree(t) { const cp = "#9ec7f2"; prim("box", t, [0, .05, 0], [.9, .1, .9], cp, true, null, .012); prim("box", t, [-.15, .33, .1], [.55, .46, .55], mul(cp, .95), true, null, .012);
+    prim("cyl", t, [-.15, .32, -.18], [.26, .005, .26], "#332b40", false, [90, 0, 0]); prim("cyl", t, [.25, .8, -.2], [.15, .75, .15], ROPE, true, null, .01);
+    prim("cyl", t, [-.15, 1.05, .1], [.13, .5, .13], ROPE, true, null, .01); prim("box", t, [.2, .95, -.15], [.45, .06, .45], cp, true, null, .01);
+    prim("cyl", t, [0, 1.55, 0], [.82, .04, .82], cp, true, null, .012); prim("torus", t, [0, 1.6, 0], [.78, .4, .78], "#ffccd9", true, null, .01);
+    prim("sphere", t, [.4, 1.25, -.25], .09, "#ffd94d", true, null, .008); prim("cyl", t, [.4, 1.42, -.25], [.008, .12, .008], "#fff"); },
+  sofa(t) { const c = "#73bdc2"; prim("box", t, [0, .26, .02], [1.8, .3, .78], mul(c, .9), true, null, .012);
+    prim("box", t, [-.42, .45, -.04], [.82, .12, .64], "#7fcacf", true, null, .012); prim("box", t, [.42, .45, -.04], [.82, .12, .64], "#7fcacf", true, null, .012);
+    prim("box", t, [0, .66, .3], [1.8, .6, .2], c, true, null, .012); prim("box", t, [-.92, .45, .02], [.18, .42, .78], c, true, null, .012); prim("box", t, [.92, .45, .02], [.18, .42, .78], c, true, null, .012);
+    for (const x of [-.8, .8]) for (const z of [-.3, .33]) prim("cyl", t, [x, .05, z], [.08, .05, .08], DARKWOOD);
+    prim("box", t, [.55, .62, .15], [.35, .3, .12], "#ffcc80", true, [-15, 10, 8], .01); },
+  plant(t) { const leaf = "#73c76b"; prim("cyl", t, [0, .18, 0], [.36, .18, .36], "#e0855c", true, null, .012); prim("cyl", t, [0, .38, 0], [.4, .03, .4], "#f2996b", true, null, .01);
+    prim("cyl", t, [0, .4, 0], [.32, .01, .32], "#6b4d38");
+    for (let i = 0; i < 7; i++) { const pv = pivot(t, [0, .42, 0], [0, i * 360 / 7, 0]); const tilt = 25 + (i % 3) * 12, r = tilt * D2R;
+      prim("sphere", pv, [0, .25 * Math.cos(r), .25 * Math.sin(r)], [.16, .42, .07], i % 2 ? "#85d97d" : leaf, true, [tilt, 0, 0], .01); }
+    prim("sphere", t, [0, .75, 0], [.15, .4, .15], "#7ed476", true, null, .01); },
+  lamp(t) { prim("cyl", t, [0, .03, 0], [.34, .03, .34], DARKWOOD, true, null, .01); prim("cyl", t, [0, .72, 0], [.04, .7, .04], DARKWOOD);
+    prim("sphere", t, [0, 1.38, 0], .16, "#fff2b3", false, null, .015, .4); prim("cone", t, [0, 1.32, 0], [.6, .38, .6], "#ffe69e", true, null, .012, .15); },
+  bookshelf(t) { prim("box", t, [0, .7, .2], [1.8, 1.4, .06], DARKWOOD); prim("box", t, [-.88, .7, 0], [.06, 1.4, .46], WOOD, true, null, .01); prim("box", t, [.88, .7, 0], [.06, 1.4, .46], WOOD, true, null, .01);
+    const books = ["#f27373", "#73a6f2", "#fad966", "#8cd98c", "#d999f2", "#ffb380"];
+    for (let s = 0; s < 4; s++) { const y = .03 + s * .46; prim("box", t, [0, y, 0], [1.8, .06, .46], WOOD, true, null, .01); if (s === 3) break;
+      let x = -.78, k = s * 3; while (x < .7) { const w = .08 + ((k * 7) % 3) * .03, h = .26 + ((k * 5) % 4) * .04; if (k % 7 !== 3) prim("box", t, [x + w / 2, y + .03 + h / 2, -.02], [w, h, .3], books[k % 6]); x += w + .015; k++; } } },
+  fish_tank(t) { prim("box", t, [0, .22, 0], [.82, .44, .6], WOOD, true, null, .012); prim("box", t, [0, .47, 0], [.78, .06, .56], "#fae6a6");
+    prim("sphere", t, [-.22, .55, .1], [.08, .25, .08], "#66cc73"); const swim = pivot(t, [0, .75, 0]); swim.userData.spin = 1.0;
+    ["#ff8c33", "#ffd940"].forEach((c, i) => { const f = pivot(swim, [i ? -.18 : .2, i * .1 - .05, 0], [0, i ? 180 : 0, 0]); prim("sphere", f, [0, 0, 0], [.05, .08, .14], c); prim("cone", f, [0, 0, -.06], [.09, .08, .09], c, false, [-90, 0, 0]); });
+    const glass = new THREE.MeshBasicMaterial({ color: "#8ce0ff", transparent: true, opacity: .35, depthWrite: false });
+    const g = prim("box", t, [0, .77, 0], [.8, .62, .58], glass); g.castShadow = false; prim("box", t, [0, 1.09, 0], [.84, .04, .62], DARKWOOD, true, null, .01); },
+  rug_round(t) { prim("cyl", t, [0, .012, 0], [1.85, .008, 1.85], "#ffbd99"); prim("cyl", t, [0, .016, 0], [1.4, .008, 1.4], "#ffdbbd"); prim("cyl", t, [0, .02, 0], [.7, .008, .7], "#ffbd99"); },
+  rug_fish(t) { const c = "#8cbffa"; prim("sphere", t, [.18, .012, 0], [1.35, .02, .8], c); prim("box", t, [-.68, .012, 0], [.42, .02, .42], c, false, [0, 45, 0]);
+    prim("cyl", t, [.6, .024, -.1], [.12, .004, .12], "#fff"); prim("cyl", t, [.6, .028, -.1], [.06, .004, .06], "#33334d"); for (let i = 0; i < 3; i++) prim("box", t, [.25 - i * .22, .024, 0], [.03, .004, .5], mul(c, .85)); },
+  toy_ball(t) { const c = "#ff809e"; prim("sphere", t, [0, .15, 0], .3, c, true, null, .01); prim("torus", t, [0, .15, 0], [.3, .1, .3], mul(c, .85), false, [30, 0, 20]); prim("torus", t, [0, .15, 0], [.3, .1, .3], mul(c, .85), false, [-40, 60, 0]); prim("cyl", t, [.2, .02, -.12], [.015, .15, .015], mul(c, .85), false, [90, 30, 0]); },
+  toy_mouse(t) { const c = "#b8b8c7"; prim("sphere", t, [0, .08, 0], [.18, .15, .3], c, true, null, .01); prim("sphere", t, [.06, .15, -.08], [.07, .07, .02], "#ffb3c7", true, null, .006); prim("sphere", t, [-.06, .15, -.08], [.07, .07, .02], "#ffb3c7", true, null, .006);
+    prim("sphere", t, [0, .08, -.16], .03, "#ff8099"); prim("cyl", t, [.04, .03, .25], [.015, .12, .015], "#ff99b3", false, [90, 20, 0]); },
+  toy_tunnel(t) { const c = "#b38ceb"; prim("cyl", t, [0, .3, 0], [.58, .85, .58], c, true, [0, 0, 90], .012); prim("cyl", t, [0, .3, 0], [.46, .86, .46], "#402e52", false, [0, 0, 90]);
+    for (let i = -2; i <= 2; i++) prim("cyl", t, [i * .32, .3, 0], [.6, .02, .6], mul(c, .85), false, [0, 0, 90]); prim("box", t, [0, .02, 0], [1.6, .04, .3], mul(c, .8)); },
+  toy_wand(t) { prim("cyl", t, [0, .04, 0], [.3, .04, .3], "#facc80", true, null, .01); const pole = pivot(t, [0, .08, 0], [0, 0, -20]); prim("cyl", pole, [0, .45, 0], [.03, .45, .03], "#f26680");
+    prim("cyl", t, [.38, .62, 0], [.006, .22, .006], "#fff"); const fe = pivot(t, [.38, .4, 0]); fe.userData.spin = 1.6;
+    ["#66ccff", "#ffd94d", "#ff80b3"].forEach((c, i) => { const a = i * 120 * D2R; prim("sphere", fe, [.04 * Math.cos(a), -.06, -.04 * Math.sin(a)], [.05, .16, .02], c, false, [0, i * 120, 20]); }); },
+  food_dry(t) { prim("box", t, [0, .32, 0], [.48, .64, .24], "#ff9e4d", true, null, .012); prim("box", t, [0, .68, 0], [.44, .08, .1], "#f28c40", true, null, .01); prim("cyl", t, [0, .32, -.125], [.28, .005, .28], "#fff", false, [90, 0, 0]); prim("sphere", t, [0, .32, -.13], [.12, .06, .01], "#80bff2"); },
+  food_wet(t) { prim("cyl", t, [0, .12, 0], [.45, .12, .45], "#d9dee8", true, null, .012); prim("cyl", t, [0, .12, 0], [.46, .07, .46], "#8ccc99"); prim("cyl", t, [0, .25, 0], [.36, .01, .36], "#b8bdcc"); },
+  food_fish(t) { const c = "#9eb8d9"; prim("sphere", t, [.05, .12, 0], [.62, .22, .2], c, true, null, .012); prim("cone", t, [-.22, .12, 0], [.22, .2, .08], mul(c, .9), true, [0, 0, 90], .01); prim("sphere", t, [.26, .15, -.08], .05, "#262633"); prim("sphere", t, [.08, .17, -.03], [.4, .06, .14], "#6680ad"); },
+  food_treat(t) { prim("cyl", t, [0, .3, 0], [.14, .3, .14], "#ff99bf", true, [0, 0, -15], .01); prim("box", t, [.08, .6, 0], [.16, .05, .06], "#ffd9e6", true, [0, 0, -15], .008); prim("sphere", t, [-.03, .32, -.07], .07, "#faf280"); },
+};
+function buildItemModel(def) {
+  const g = new THREE.Group();
+  if (MODELS[def.id]) MODELS[def.id](g);
+  else if (isTheme(def)) { const tex = patternTex(def, def.cat === "wall"); tex.repeat.set(1.5, 1.5);
+    const m = new THREE.MeshToonMaterial({ map: tex, gradientMap: gradTex });
+    prim("box", g, def.cat === "wall" ? [0, .45, 0] : [0, .04, 0], def.cat === "wall" ? [.9, .9, .05] : [.9, .05, .9], m); }
+  return g;
+}
+
+// ---------------- Room ----------------
+const room = { items: [], group: new THREE.Group(), wallMat: null, floorMat: null, door: null, doorTimer: 0, doorAngle: 0, grid: null };
+scene.add(room.group);
+const DOOR_CELLS = [[0, 1], [0, 2]];
+const DOOR_INSIDE = new THREE.Vector3(0.6, 0, 2), DOOR_THRESHOLD = new THREE.Vector3(0.12, 0, 2);
+function buildShell() {
+  const g = room.group;
+  prim("box", g, [3.85, -.32, 4.15], [8.5, .6, 8.5], "#fad1a8").castShadow = false;
+  prim("box", g, [3.85, -.66, 4.15], [8.3, .1, 8.3], "#c8a786");
+  room.floorMat = new THREE.MeshToonMaterial({ gradientMap: gradTex });
+  room.floor = prim("box", g, [4, -.01, 4], [8, .02, 8], room.floorMat); room.floor.castShadow = false;
+  room.wallMat = new THREE.MeshToonMaterial({ gradientMap: gradTex });
+  prim("box", g, [3.85, 2, 8.15], [8.3, 4, .3], room.wallMat).castShadow = false;
+  prim("box", g, [-.15, 2, 4], [.3, 4, 8], room.wallMat).castShadow = false;
+  prim("box", g, [3.8, 4.06, 8.15], [8.5, .14, .42], "#d19466"); prim("box", g, [-.15, 4.06, 3.95], [.42, .14, 8.1], "#d19466");
+  prim("box", g, [4, .09, 7.98], [8, .18, .05], "#fff7eb"); prim("box", g, [.02, .09, 4], [.05, .18, 8], "#fff7eb");
+  // window
+  const w = pivot(g, [5.6, 2.3, 7.99]); const fr = "#fffaf2";
+  prim("box", w, [0, 0, 0], [1.7, 1.3, .02], "#9ed9ff", false, null, .015, .15);
+  prim("sphere", w, [-.45, .25, -.02], [.5, .22, .02], "#fff"); prim("sphere", w, [-.2, .32, -.02], [.4, .25, .02], "#fff"); prim("sphere", w, [.45, -.15, -.02], [.45, .18, .02], "#fff");
+  prim("box", w, [0, 0, -.04], [.07, 1.3, .05], fr); prim("box", w, [0, 0, -.04], [1.7, .07, .05], fr);
+  for (const y of [.68, -.68]) prim("box", w, [0, y, -.04], [1.86, .1, .08], fr, true, null, .01);
+  for (const x of [-.88, .88]) prim("box", w, [x, 0, -.04], [.1, 1.4, .08], fr, true, null, .01);
+  prim("box", w, [0, -.76, -.12], [2, .06, .26], fr, true, null, .01);
+  for (const x of [-1.08, 1.08]) prim("box", w, [x, 0, -.08], [.36, 1.7, .06], "#ffb3bd", true, null, .01);
+  prim("cyl", w, [0, .9, -.1], [.04, 1.35, .04], "#d19466", false, [0, 0, 90]);
+  prim("cyl", w, [.55, -.62, -.14], [.14, .08, .14], "#e0855c", true, null, .008); prim("sphere", w, [.55, -.46, -.14], [.1, .2, .1], "#73c76b", true, null, .008);
+  // door
+  prim("box", g, [.005, 1.25, 2], [.01, 2.5, 1.2], "#b8e6ff", false, null, .015, .5);
+  prim("box", g, [.12, .03, 2], [.25, .06, 1.2], "#99bf8c");
+  prim("box", g, [.03, 2.55, 2], [.08, .12, 1.42], "#faebd1", true, null, .01);
+  prim("box", g, [.03, 1.25, 1.33], [.08, 2.6, .1], "#faebd1", true, null, .01); prim("box", g, [.03, 1.25, 2.67], [.08, 2.6, .1], "#faebd1", true, null, .01);
+  room.door = pivot(g, [.05, 0, 2.6]);
+  prim("box", room.door, [0, 1.25, -.6], [.06, 2.48, 1.18], "#db9966", true, null, .01);
+  prim("box", room.door, [.035, 1.75, -.6], [.02, .8, .8], "#c4895c"); prim("box", room.door, [.035, .7, -.6], [.02, .8, .8], "#c4895c");
+  prim("sphere", room.door, [.07, 1.2, -1.05], .09, "#ffd94d", true, null, .008); prim("box", room.door, [.04, .25, -.6], [.02, .35, .4], "#8c6147");
+  // portrait & clock
+  const pic = pivot(g, [.02, 2.4, 5.4]); prim("box", pic, [0, 0, 0], [.05, .9, 1.1], "#d19466", true, null, .01); prim("box", pic, [.02, 0, 0], [.03, .72, .92], "#fff2cc");
+  prim("sphere", pic, [.05, -.05, 0], [.02, .38, .44], "#ffa84d"); prim("cone", pic, [.05, .1, -.13], [.02, .18, .14], "#ffa84d"); prim("cone", pic, [.05, .1, .13], [.02, .18, .14], "#ffa84d");
+  prim("sphere", pic, [.07, -.03, -.08], [.01, .06, .05], "#332626"); prim("sphere", pic, [.07, -.03, .08], [.01, .06, .05], "#332626");
+  const clock = pivot(g, [2.2, 2.9, 7.98]); prim("cyl", clock, [0, 0, 0], [.6, .03, .6], "#fff", true, [90, 0, 0], .015);
+  prim("box", clock, [0, .1, -.04], [.03, .2, .01], "#4d3833"); const mh = pivot(clock, [0, 0, -.05]); prim("box", mh, [0, .12, 0], [.02, .25, .01], "#4d3833"); mh.userData.spinZ = -0.5;
+  // grid overlay
+  const gc = document.createElement("canvas"); gc.width = gc.height = 256; const gg = gc.getContext("2d");
+  gg.fillStyle = "rgba(255,255,255,.08)"; gg.fillRect(0, 0, 256, 256); gg.strokeStyle = "rgba(255,255,255,.9)"; gg.lineWidth = 2;
+  for (let i = 0; i <= 8; i++) { gg.beginPath(); gg.moveTo(i * 32, 0); gg.lineTo(i * 32, 256); gg.stroke(); gg.beginPath(); gg.moveTo(0, i * 32); gg.lineTo(256, i * 32); gg.stroke(); }
+  room.grid = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), transparent: true, opacity: .6, depthWrite: false }));
+  room.grid.rotation.x = -Math.PI / 2; room.grid.position.set(4, .03, 4); room.grid.visible = false; g.add(room.grid);
+}
+function applyWall(def) { const t = patternTex(def, true); t.repeat.set(4, 2); if (room.wallMat.map) room.wallMat.map.dispose(); room.wallMat.map = t; room.wallMat.needsUpdate = true; }
+function applyFloor(def) { const t = patternTex(def, false); t.repeat.set(4, 4); if (room.floorMat.map) room.floorMat.map.dispose(); room.floorMat.map = t; room.floorMat.needsUpdate = true; }
+const footW = (d, r) => (r % 2 === 0 ? d.w : d.d), footD = (d, r) => (r % 2 === 0 ? d.d : d.w);
+const footCenter = (d, x, z, r) => new THREE.Vector3(x + footW(d, r) / 2, 0, z + footD(d, r) / 2);
+function cellFor(d, r, p) { const fw = footW(d, r), fd = footD(d, r); return [clamp(Math.round(p.x - fw / 2), 0, ROOM - fw), clamp(Math.round(p.z - fd / 2), 0, ROOM - fd)]; }
+function canPlace(d, x, z, r, ignore) {
+  const fw = footW(d, r), fd = footD(d, r);
+  if (x < 0 || z < 0 || x + fw > ROOM || z + fd > ROOM) return false;
+  for (let cx = x; cx < x + fw; cx++) for (let cz = z; cz < z + fd; cz++) {
+    if (!d.flat && DOOR_CELLS.some(([a, b]) => a === cx && b === cz)) return false;
+    for (const it of room.items) { if (it === ignore || !!it.def.flat !== !!d.flat) continue;
+      const iw = footW(it.def, it.rot), id = footD(it.def, it.rot);
+      if (cx >= it.x && cx < it.x + iw && cz >= it.z && cz < it.z + id) return false; }
+  }
+  return true;
+}
+function setItemTransform(it, x, z, r) { it.x = x; it.z = z; it.rot = ((r % 4) + 4) % 4; it.obj.position.copy(footCenter(it.def, x, z, it.rot)); it.obj.rotation.y = -it.rot * Math.PI / 2; }
+function placeItem(def, x, z, r) {
+  const obj = buildItemModel(def); room.group.add(obj);
+  const it = { def, obj, x, z, rot: r, occupant: null }; obj.userData.item = it; setItemTransform(it, x, z, r); room.items.push(it); dirty(); return it;
+}
+function removeItem(it) { if (it.occupant) it.occupant.dropToFloor(); room.items.splice(room.items.indexOf(it), 1); room.group.remove(it.obj); dirty(); }
+function moveItem(it, x, z, r) { if (it.occupant) it.occupant.dropToFloor(); setItemTransform(it, x, z, r); dirty(); }
+const comfort = () => room.items.reduce((s, i) => s + (i.def.comfort || 0), 0);
+const comfortMult = () => Math.min(3, 1 + comfort() * 0.02);
+const isPerch = it => (it.def.useHeight || 0) > 0.05;
+const clampFloor = p => { p.x = clamp(p.x, MARGIN, ROOM - MARGIN); p.z = clamp(p.z, MARGIN, ROOM - MARGIN); return p; };
+function approachPoint(it) { const depth = it.def.d * 0.5 + 0.35; const v = new THREE.Vector3(0, 0, -depth).applyEuler(it.obj.rotation).add(it.obj.position); v.y = 0; return clampFloor(v); }
+const usePoint = it => (isPerch(it) ? new THREE.Vector3(it.obj.position.x, it.def.useHeight, it.obj.position.z) : approachPoint(it));
+function findFree(pred, near) { let best = null, bs = 1e9; for (const it of room.items) { if (it.occupant || !pred(it)) continue; const s = near.distanceTo(it.obj.position) + Math.random() * 3; if (s < bs) { bs = s; best = it; } } return best; }
+function nearestBowl(near) { let best = null, bd = 1e9; for (const it of room.items) if (it.def.use === "bowl") { const d = near.distanceTo(it.obj.position); if (d < bd) { bd = d; best = it; } } return best; }
+const randomFloor = () => new THREE.Vector3(rand(.8, ROOM - .8), 0, rand(.8, ROOM - .8));
+
+// ---------------- Cats ----------------
+const cats = []; let stray = null, strayTimer = 35;
+function buildCatModel(presetIdx, size) {
+  const p = PRESETS[presetIdx] || PRESETS[0], root = new THREE.Group(), OW = .012, v = { root };
+  root.scale.setScalar(size);
+  v.model = pivot(root, [0, 0, 0]); v.body = pivot(v.model, [0, .32, 0]);
+  prim("sphere", v.body, [0, 0, 0], [.48, .4, .66], p.body, true, null, OW); prim("sphere", v.body, [0, -.04, .16], [.34, .3, .32], p.legs);
+  v.legs = [[-.13, .2, .19], [.13, .2, .19], [-.13, .2, -.19], [.13, .2, -.19]].map(pos => { const l = pivot(v.model, pos); prim("sphere", l, [0, -.11, 0], [.13, .24, .13], p.legs, true, null, OW); return l; });
+  v.tail = pivot(v.model, [0, .38, -.3], [-35, 0, 0]); prim("cyl", v.tail, [0, .2, 0], [.085, .2, .085], p.tail, true, null, OW); prim("sphere", v.tail, [0, .4, 0], .1, p.tip, true, null, OW);
+  v.head = pivot(v.model, [0, .6, .28]); prim("sphere", v.head, [0, 0, 0], [.5, .42, .44], p.head, true, null, OW);
+  if (p.patch) prim("sphere", v.head, [.11, .07, .05], [.28, .26, .36], p.patch);
+  prim("sphere", v.head, [0, -.07, .17], [.22, .14, .13], p.muzzle); prim("sphere", v.head, [0, -.025, .225], [.06, .04, .035], "#ff8c9e");
+  prim("sphere", v.head, [-.15, -.07, .14], [.08, .04, .03], "#ffb3bf", false, [0, -35, 0]); prim("sphere", v.head, [.15, -.07, .14], [.08, .04, .03], "#ffb3bf", false, [0, 35, 0]);
+  v.eyes = []; v.closed = [];
+  [-1, 1].forEach((side, i) => {
+    const e = pivot(v.head, [.1 * side, .025, .185], [0, 18 * side, 0]);
+    prim("sphere", e, [0, 0, 0], [.095, .115, .05], i ? p.eyeR : p.eyeL); prim("sphere", e, [0, 0, .012], [.06, .09, .035], "#211a1f"); prim("sphere", e, [.015 * side, .025, .028], .028, "#fff");
+    const c = pivot(v.head, [.1 * side, .02, .2], [0, 18 * side, 0]); prim("box", c, [0, 0, 0], [.09, .018, .02], "#211a1f"); c.visible = false;
+    v.eyes.push(e); v.closed.push(c);
+    const ear = pivot(v.head, [.13 * side, .13, -.02], [0, 0, -18 * side]); prim("cone", ear, [0, 0, 0], [.17, .2, .1], p.ears, true, null, OW); prim("cone", ear, [0, .01, .03], [.1, .14, .05], "#ffb8c7");
+    if (i) v.earR = ear; else v.earL = ear;
+    for (let k = 0; k < 2; k++) prim("box", v.head, [.17 * side, -.06 + k * .03, .17], [.16, .006, .006], "#594742", false, [0, -20 * side, (k ? -8 : 8) * side]);
+  });
+  v.blink = 2; v.blinkT = 0; v.cycle = 0; v.t0 = Math.random() * 10; v.pose = "stand"; v.look = 0;
+  return v;
+}
+const lerp = (a, b, t) => a + (b - a) * Math.min(1, t);
+function animateCat(v, dt, now) {
+  const t = now + v.t0, forceClosed = v.pose === "sleep" || v.pose === "happy";
+  v.blink -= dt; if (v.blink <= 0) { v.blinkT = .12; v.blink = rand(2, 5); } v.blinkT -= dt;
+  const closed = forceClosed || v.blinkT > 0; v.eyes.forEach((e, i) => { e.visible = !closed; v.closed[i].visible = closed; });
+  let my = 0, mz = 0, rx = 0, bs = [1, 1, 1], hp = 0, hy = v.look, hr = 0, ty = Math.sin(t * 2) * 15, tp = -35, et = 0, ls = 1; const sw = [0, 0, 0, 0];
+  switch (v.pose) {
+    case "walk": v.cycle += dt * 9; for (let i = 0; i < 4; i++) sw[i] = Math.sin(v.cycle + (i === 0 || i === 3 ? 0 : Math.PI)) * 28; my = Math.abs(Math.sin(v.cycle)) * .035; ty = Math.sin(t * 5) * 12; tp = -50; break;
+    case "loaf": ls = .35; my = -.12; bs = [1.05, 1 + Math.sin(t * 2) * .02, 1]; ty = 70 + Math.sin(t * 1.5) * 8; tp = -95; hy += Math.sin(t * .5) * 25; break;
+    case "sleep": ls = .3; my = -.15; bs = [1.08, .95 + Math.sin(t * 1.6) * .04, 1]; hp = 18; hr = 12; ty = 95; tp = -100; break;
+    case "eat": hp = 30 + Math.sin(t * 10) * 6; ty = Math.sin(t * 3) * 20; break;
+    case "happy": hr = Math.sin(t * 4) * 12; bs = [1 + Math.sin(t * 8) * .03, 1 - Math.sin(t * 8) * .03, 1]; ty = Math.sin(t * 6) * 25; tp = -15; break;
+    case "play": { const j = Math.abs(Math.sin(t * 6)); my = j * .25; rx = -j * 15; sw[0] = sw[1] = -j * 40; ty = Math.sin(t * 9) * 30; tp = -10; break; }
+    case "scratch": rx = -40; my = .12; mz = -.1; sw[0] = -60 + Math.sin(t * 14) * 25; sw[1] = -60 - Math.sin(t * 14) * 25; tp = -80; break;
+    case "hiss": bs = [1.15, 1.2, 1.05]; my = .04 + Math.sin(t * 30) * .008; et = 45; tp = 10; ty = 0; break;
+  }
+  const k = dt * 12;
+  v.model.position.y = lerp(v.model.position.y, my, k); v.model.position.z = lerp(v.model.position.z, mz, k); v.model.rotation.x = lerp(v.model.rotation.x, rx * D2R, dt * 10);
+  v.body.scale.set(lerp(v.body.scale.x, bs[0], k), lerp(v.body.scale.y, bs[1], k), lerp(v.body.scale.z, bs[2], k));
+  v.head.rotation.x = lerp(v.head.rotation.x, hp * D2R, dt * 8); v.head.rotation.y = lerp(v.head.rotation.y, hy * D2R, dt * 8); v.head.rotation.z = lerp(v.head.rotation.z, hr * D2R, dt * 8);
+  v.tail.rotation.x = lerp(v.tail.rotation.x, tp * D2R, dt * 8); v.tail.rotation.y = lerp(v.tail.rotation.y, ty * D2R, dt * 8);
+  v.earL.rotation.z = lerp(v.earL.rotation.z, (18 + et) * D2R, k); v.earR.rotation.z = lerp(v.earR.rotation.z, (-18 - et) * D2R, k);
+  v.legs.forEach((l, i) => { l.rotation.x = lerp(l.rotation.x, sw[i] * D2R, dt * 14); l.scale.y = lerp(l.scale.y, ls, k); });
+}
+
+class Cat {
+  constructor(d, isStray, pos) {
+    this.d = d; this.isStray = isStray; this.root = new THREE.Group(); this.root.position.copy(pos); this.root.rotation.y = rand(0, 6.28);
+    this.v = buildCatModel(d.preset, d.size); this.root.add(this.v.root); this.root.userData.cat = this; scene.add(this.root);
+    this.state = "idle"; this.timer = rand(.5, 2); this.path = []; this.leg = null; this.onArrive = null; this.using = null;
+    this.petCd = 0; this.playCd = 0; this.income = rand(0, 10); this.meow = rand(8, 20); this.trust = 0; this.stay = 0; this.favKnown = false; this.spawn = 1; this.dish = null;
+  }
+  get perched() { return this.root.position.y > 0.05; }
+  get happiness() { const d = this.d; return clamp(d.hunger * .3 + d.fun * .3 + d.energy * .2 + d.affection * .2 + Math.min(15, comfort() * .3), 0, 100); }
+  get canAdopt() { return this.isStray && this.trust >= 100; }
+  get thought() {
+    if (this.state === "sleep") return "sleepy";
+    if (this.state === "petted" || this.canAdopt) return "love";
+    if (this.d.hunger < 25) return "hungry";
+    if (!this.isStray && this.d.fun < 25) return "bored";
+    return null;
+  }
+  status() {
+    const m = { sleep: "st_sleep", eat: "st_eat", petted: "st_purr", play: "st_play", hiss: "st_hiss", moving: "st_walk" };
+    if (this.state === "using" && this.using) return F("st_using", iname(this.using.def));
+    if (m[this.state]) return T(m[this.state]);
+    if (this.isStray) return T(this.canAdopt ? "st_wants_home" : "st_shy");
+    return T("st_relax");
+  }
+  headTop() { const p = new THREE.Vector3(); this.v.head.getWorldPosition(p); p.y += .35 * this.d.size; return p; }
+  update(dt, now) {
+    this.petCd -= dt; this.playCd -= dt;
+    if (this.spawn < 1) { this.spawn = Math.min(1, this.spawn + dt * 2); this.root.scale.setScalar(this.spawn); }
+    this.needs(dt); this.move(dt); this.tick(dt);
+    if (!this.isStray) { this.income += dt; if (this.income >= 10) { this.income = 0; const h = this.happiness; if (h >= 20) addCoinBubble(this, Math.max(1, Math.round((2 + 8 * Math.pow(h / 100, 1.5)) * comfortMult()))); } }
+    else { this.trust = Math.min(100, this.trust + comfort() * .004 * dt); if (!this.canAdopt && this.state !== "leaving" && this.state !== "entering") { this.stay -= dt; if (this.stay <= 0) this.leave(); } }
+    this.meow -= dt; if (this.meow <= 0) { this.meow = rand(18, 40); if (this.state !== "sleep" && (this.thought === "hungry" || this.isStray || Math.random() < .3)) sfx.meow(this.d.size); }
+    animateCat(this.v, dt, now);
+  }
+  needs(dt) {
+    const d = this.d;
+    d.hunger -= .09 * dt * (this.isStray ? .5 : 1); if (this.state !== "sleep") d.energy -= .07 * dt; d.fun -= .11 * dt * (this.state === "sleep" ? .3 : 1);
+    d.affection += clamp(30 - d.affection, -.02 * dt, .02 * dt);
+    if (this.state === "using" && this.using) { d.fun += (this.using.def.funRate || 0) * dt; d.energy += (this.using.def.energyRate || 0) * dt; }
+    if (this.state === "sleep") d.energy += Math.max(2.2, this.using ? (this.using.def.energyRate || 0) + 1.5 : 0) * dt;
+    for (const k of ["hunger", "fun", "energy", "affection"]) d[k] = clamp(d[k], 0, 100);
+  }
+  moveTo(goal, perch, arrive) {
+    this.path = []; this.leg = null;
+    if (this.perched) { const down = this.root.position.clone(); down.y = 0; const c = new THREE.Vector3(4, 0, 4).sub(down).normalize().multiplyScalar(.7); this.path.push({ pos: clampFloor(down.add(c)), hop: true }); }
+    const g = goal.clone(); g.y = 0; this.path.push({ pos: clampFloor(g), hop: false });
+    if (perch) this.path.push({ pos: perch.clone(), hop: true });
+    this.onArrive = arrive; this.state = "moving"; this.v.pose = "walk";
+  }
+  move(dt) {
+    if (!["moving", "entering", "leaving"].includes(this.state)) return;
+    if (!this.leg) {
+      if (!this.path.length) { const cb = this.onArrive; this.onArrive = null; if (cb) cb(); else this.idle(rand(1, 3)); return; }
+      this.leg = this.path.shift(); this.from = this.root.position.clone(); this.hopT = 0;
+    }
+    const L2 = this.leg, pos = this.root.position;
+    if (L2.hop) {
+      this.hopT += dt / .45; const k = Math.min(1, this.hopT), s = k * k * (3 - 2 * k);
+      pos.lerpVectors(this.from, L2.pos, s); pos.y += Math.sin(k * Math.PI) * .45; this.face(L2.pos.clone().sub(this.from), dt); this.v.pose = "play";
+      if (this.hopT >= 1) { pos.copy(L2.pos); this.leg = null; this.v.pose = "walk"; }
+      return;
+    }
+    const speed = (this.isStray ? 1 : 1.3) * (this.d.energy < 20 ? .7 : 1);
+    const tgt = L2.pos.clone(); tgt.y = pos.y; const delta = tgt.sub(pos); this.v.pose = "walk";
+    if (delta.length() <= speed * dt || delta.length() < .02) { pos.x = L2.pos.x; pos.z = L2.pos.z; this.leg = null; return; }
+    this.face(delta, dt); pos.add(delta.normalize().multiplyScalar(speed * dt));
+  }
+  face(dir, dt) { if (dir.x * dir.x + dir.z * dir.z < 1e-4) return; const target = Math.atan2(dir.x, dir.z); let diff = target - this.root.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff)); this.root.rotation.y += diff * Math.min(1, dt * 8); }
+  faceAt(p) { const d = p.clone().sub(this.root.position); if (d.x * d.x + d.z * d.z > 1e-4) this.root.rotation.y = Math.atan2(d.x, d.z); }
+  faceCamera() { const d = CAM_DIR.clone(); this.root.rotation.y = Math.atan2(d.x, d.z) + rand(-.6, .6); }
+  idle(sec, pose = "stand") { this.state = "idle"; this.timer = sec; this.v.pose = pose; }
+  tick(dt) {
+    this.timer -= dt;
+    switch (this.state) {
+      case "idle":
+        if (this.v.pose === "stand" || this.v.pose === "loaf") this.v.look = Math.sin(performance.now() / 1000 * .7 + this.d.size * 10) * 20;
+        if (this.timer <= 0) this.isStray ? this.strayThink() : this.think(); break;
+      case "using":
+        if (!this.using) { this.idle(1); break; }
+        if (this.using.def.use === "sleep" && this.d.energy < 60) { this.state = "sleep"; this.v.pose = "sleep"; break; }
+        if (this.timer <= 0) this.finishUsing(); break;
+      case "sleep": if (this.d.energy >= 98 || (this.timer <= -60 && this.d.energy > 60)) { this.finishUsing(); this.idle(2); } break;
+      case "eat": case "petted": case "play": case "hiss":
+        if (this.timer <= 0) { if (this.dish) { this.root.remove(this.dish); this.dish = null; } if (this.using) this.resumeUsing(); else this.idle(rand(1, 3), "loaf"); } break;
+    }
+  }
+  think() {
+    const pos = this.root.position; this.v.look = 0;
+    if (this.d.energy < 30) { const bed = findFree(i => ["sleep", "sit", "climb"].includes(i.def.use), pos); if (bed) return this.goUse(bed); return this.sleepHere(); }
+    if (this.d.hunger < 25) { const bowl = nearestBowl(pos); if (bowl && pos.distanceTo(approachPoint(bowl)) > .6) this.moveTo(approachPoint(bowl), null, () => { this.faceAt(bowl.obj.position); this.idle(6, "loaf"); }); else this.idle(5, "loaf"); return; }
+    if (this.d.fun < 55 && Math.random() < .75) { const toy = findFree(i => (i.def.funRate || 0) > 0 && i.def.use !== "sleep", pos); if (toy) return this.goUse(toy); }
+    const r = Math.random();
+    if (r < .35) this.moveTo(randomFloor(), null, null);
+    else if (r < .6) this.idle(rand(3, 7), Math.random() < .5 ? "loaf" : "stand");
+    else { const any = findFree(i => i.def.use && i.def.use !== "bowl", pos); if (any) this.goUse(any); else this.moveTo(randomFloor(), null, null); }
+  }
+  sleepHere() { this.release(); this.state = "sleep"; this.timer = 0; this.v.pose = "sleep"; }
+  goUse(it) { this.release(); this.using = it; it.occupant = this; this.moveTo(approachPoint(it), isPerch(it) ? usePoint(it) : null, () => this.startUsing()); }
+  startUsing() {
+    const it = this.using; if (!it) return this.idle(1);
+    if (!isPerch(it)) this.faceAt(it.obj.position); else this.root.rotation.y = it.obj.rotation.y + Math.PI + rand(-.5, .5);
+    this.timer = it.def.useTime * rand(.8, 1.3); this.resumeUsing();
+  }
+  resumeUsing() {
+    const it = this.using; if (!it) return this.idle(1);
+    this.state = "using"; if (this.timer <= 0) this.timer = 3;
+    const u = it.def.use;
+    this.v.pose = u === "play" ? "play" : u === "scratch" ? "scratch" : "loaf";
+    if (u === "sleep" && this.d.energy < 60) { this.state = "sleep"; this.v.pose = "sleep"; }
+    if (it.def.id === "box") this.v.pose = "loaf";
+  }
+  finishUsing() { this.release(); this.idle(rand(1, 3)); }
+  release() { if (this.using) { if (this.using.occupant === this) this.using.occupant = null; this.using = null; } if (this.state === "using" || this.state === "sleep") this.idle(.5); }
+  dropToFloor() { this.release(); this.root.position.y = 0; clampFloor(this.root.position); this.path = []; this.leg = null; this.idle(1); }
+  stopMoving() {
+    if (this.state !== "moving") return;
+    const toPerch = this.using && isPerch(this.using); this.path = []; this.leg = null; this.onArrive = null;
+    if (this.perched) { const flat = this.root.position.clone(); flat.y = 0;
+      if (toPerch && flat.distanceTo(approachPoint(this.using)) < 1.2) { this.root.position.copy(usePoint(this.using)); return; }
+      this.root.position.copy(clampFloor(flat)); }
+    if (this.using) { this.using.occupant = null; this.using = null; }
+  }
+  beginStray(stayTime) {
+    this.isStray = true; this.stay = stayTime; this.trust = 0; this.spawn = .4; this.root.scale.setScalar(.4);
+    this.root.position.copy(DOOR_THRESHOLD); this.root.rotation.y = Math.PI / 2; openDoor(1.6);
+    const spot = DOOR_INSIDE.clone().add(new THREE.Vector3(rand(.6, 1.4), 0, rand(-.4, .8)));
+    this.moveTo(spot, null, () => { this.faceCamera(); this.idle(2); }); this.state = "entering";
+  }
+  strayThink() {
+    if (Math.random() < .3) { const r = lerp(1, 3.5, this.trust / 100); const p = DOOR_INSIDE.clone().add(new THREE.Vector3(rand(.3, r), 0, rand(-r * .6, r)));
+      this.moveTo(p, null, () => { this.faceCamera(); this.idle(rand(3, 6)); }); }
+    else { this.faceCamera(); this.idle(rand(3, 6), Math.random() < .5 ? "loaf" : "stand"); }
+  }
+  leave() {
+    if (this.state === "leaving") return; this.release(); this.moveTo(DOOR_INSIDE, null, null);
+    this.path.push({ pos: DOOR_THRESHOLD.clone(), hop: false });
+    this.onArrive = () => { scene.remove(this.root); if (stray === this) { stray = null; strayTimer = rand(50, 110); toast(T("stray_left")); if (selected === this) select(null); } };
+    this.state = "leaving"; openDoor(4);
+  }
+  get busy() { return this.state === "entering" || this.state === "leaving"; }
+  pet() {
+    if (this.busy) return "busy"; if (this.petCd > 0) return "cooldown"; this.petCd = 2.5; this.stopMoving();
+    if (this.isStray && this.trust < 25 && Math.random() < .6) { this.trust += 2; this.state = "hiss"; this.timer = 1.2; this.v.pose = "hiss"; sfx.hiss(); return "hiss"; }
+    if (this.isStray) this.trust = Math.min(100, this.trust + 6);
+    this.d.affection = Math.min(100, this.d.affection + 7); this.d.fun = Math.min(100, this.d.fun + 3);
+    this.state = "petted"; this.timer = 2.2; this.v.pose = "happy"; sfx.purr(); spawnHearts(this.headTop(), 3); return "ok";
+  }
+  play() {
+    if (this.busy) return "busy"; if (this.playCd > 0) return "cooldown"; if (this.d.energy < 12) return "tired";
+    this.playCd = 6; this.stopMoving(); if (this.state === "sleep") this.release();
+    if (this.isStray) this.trust = Math.min(100, this.trust + (this.trust < 20 ? 4 : 8));
+    this.d.fun = Math.min(100, this.d.fun + 18); this.d.energy = Math.max(0, this.d.energy - 4); this.d.affection = Math.min(100, this.d.affection + 3);
+    this.state = "play"; this.timer = 2.8; this.v.pose = "play"; sfx.meow(this.d.size); return "ok";
+  }
+  feed(food) {
+    if (this.busy) return "busy"; if (this.d.hunger > 92) return "full"; if (!takeItem(food.id)) return "nofood";
+    const fav = food.id === this.d.favoriteFood;
+    this.d.hunger = Math.min(100, this.d.hunger + food.hungerGain); this.d.fun = Math.min(100, this.d.fun + food.funGain + (fav ? 8 : 0)); this.d.affection = Math.min(100, this.d.affection + (fav ? 6 : 3));
+    if (this.isStray) { this.trust = Math.min(100, this.trust + food.trustGain * (fav ? 2 : 1)); this.stay += 20; }
+    if (fav) this.favKnown = true;
+    this.stopMoving(); if (this.state === "sleep") this.release();
+    this.state = "eat"; this.timer = 3; this.v.pose = "eat";
+    if (this.dish) this.root.remove(this.dish);
+    this.dish = pivot(this.root, [0, 0, .55 * this.d.size]); prim("cyl", this.dish, [0, .03, 0], [.3, .03, .3], "#fffaf2", true, null, .01);
+    prim("sphere", this.dish, [0, .06, 0], [.22, .06, .22], { food_fish: "#9eb8d9", food_treat: "#ffbfcc", food_wet: "#d98c73" }[food.id] || "#bf804d");
+    sfx.eat(); if (fav) spawnHearts(this.headTop(), 5); return "ok";
+  }
+}
+function openDoor(s) { room.doorTimer = Math.max(room.doorTimer, s); }
+function spawnStray() {
+  if (stray) return;
+  const foods = ["food_dry", "food_wet", "food_fish", "food_treat"];
+  let ni = 1 + Math.floor(Math.random() * (NAMES.length - 1)); for (let t = 0; t < 10 && cats.some(c => c.d.nameIndex === ni); t++) ni = 1 + Math.floor(Math.random() * (NAMES.length - 1));
+  const d = { uid: uid(), nameIndex: ni, preset: randomPreset(), size: rand(.88, 1.1), hunger: rand(25, 45), fun: 30, energy: 55, affection: 10, favoriteFood: foods[Math.floor(Math.random() * 4)], posX: 1.5, posZ: 2 };
+  stray = new Cat(d, true, DOOR_THRESHOLD); stray.beginStray(rand(150, 210)); sfx.bell(); toast(T("stray_arrived")); refreshHud();
+}
+function adopt() {
+  if (!stray || !stray.canAdopt || cats.length >= MAX_CATS) return false;
+  const c = stray; stray = null; c.isStray = false; c.trust = 100; c.d.affection = Math.max(c.d.affection, 70);
+  c.state = "petted"; c.timer = 3; c.v.pose = "happy"; cats.push(c); S.cats.push(c.d); S.adoptedCount++; strayTimer = rand(60, 120);
+  sfx.adopt(); spawnHearts(c.headTop(), 8); dirty(); return true;
+}
+
+// ---------------- Economy ----------------
+function dirty() { saveDirty = true; }
+function addCoins(n) { if (n <= 0) return; S.coins += n; S.lifetimeCoins += n; dirty(); refreshHud(); }
+const count = id => S.inventory[id] || 0;
+function addItem(id, n = 1) { S.inventory[id] = count(id) + n; dirty(); }
+function takeItem(id) { if (count(id) <= 0) return false; S.inventory[id]--; if (!S.inventory[id]) delete S.inventory[id]; dirty(); return true; }
+function buy(def) {
+  if (isTheme(def) && S.ownedThemes.includes(def.id)) return "owned";
+  if (S.coins < def.price) { sfx.error(); return "poor"; }
+  S.coins -= def.price; dirty();
+  if (isTheme(def)) { S.ownedThemes.push(def.id); applyTheme(def); } else addItem(def.id);
+  sfx.buy(); refreshHud(); return "ok";
+}
+function applyTheme(def) { if (def.cat === "wall") { S.wallpaper = def.id; applyWall(def); } else { S.flooring = def.id; applyFloor(def); } dirty(); }
+
+// ---------------- Audio (WebAudio synth) ----------------
+const sfx = (() => {
+  let ctx = null, master = null, musicOn = false, musicTimer = null;
+  const ok = () => S.soundOn && ctx;
+  function init() { if (ctx) return; try { ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.gain.value = .6; master.connect(ctx.destination); } catch (e) { ctx = null; } }
+  function tone(f, dur, type = "sine", vol = .2, f2 = null, delay = 0) {
+    if (!ok()) return; const t = ctx.currentTime + delay, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05);
+  }
+  function noise(dur, vol, am = 0) {
+    if (!ok()) return; const n = Math.floor(ctx.sampleRate * dur), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) { const t = i / ctx.sampleRate; d[i] = (Math.random() * 2 - 1) * (am ? .55 + .45 * Math.sin(t * 6.283 * am) : 1) * Math.min(1, (dur - t) * 4, t * 30); }
+    const s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = am ? 500 : 3500;
+    g.gain.value = vol; s.buffer = b; s.connect(f); f.connect(g); g.connect(master); s.start();
+  }
+  function meow(size = 1) {
+    if (!ok()) return; const t = ctx.currentTime, o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(), k = clamp(1.15 / size + rand(-.07, .07), .8, 1.5);
+    o.type = "sawtooth"; o.frequency.setValueAtTime(480 * k, t); o.frequency.linearRampToValueAtTime(820 * k, t + .18); o.frequency.linearRampToValueAtTime(420 * k, t + .5);
+    f.type = "bandpass"; f.frequency.setValueAtTime(900, t); f.frequency.linearRampToValueAtTime(1800, t + .2); f.frequency.linearRampToValueAtTime(700, t + .5); f.Q.value = 3;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.35, t + .05); g.gain.linearRampToValueAtTime(0, t + .55);
+    o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + .6);
+  }
+  function startMusic() {
+    if (musicOn || !ok()) return; musicOn = true;
+    const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5], mel = [0, 2, 3, 2, 4, 3, 2, -1, 1, 2, 3, 1, 0, -1, 2, -1, 3, 4, 5, 4, 3, 2, 3, -1, 2, 1, 0, 1, 2, -1, 0, -1];
+    const bass = [130.81, 174.61, 196, 130.81, 110, 174.61, 196, 130.81]; let step = 0; const beat = 60 / 92;
+    musicTimer = setInterval(() => { if (!S.soundOn || document.hidden) return; const n = mel[step % mel.length]; if (n >= 0) tone(scale[n], beat * 1.4, "sine", .05);
+      if (step % 4 === 0) tone(bass[(step / 4) % 8], beat * 3.5, "triangle", .05); step++; }, beat * 1000);
+  }
+  return {
+    unlock() { init(); if (ctx && ctx.state === "suspended") ctx.resume(); startMusic(); },
+    click: () => tone(900, .05, "sine", .12), pop: () => tone(900, .12, "sine", .15, 400),
+    coin: () => { tone(1320, .08, "square", .06); tone(1760, .2, "square", .06, null, .07); },
+    buy: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, .18, "sine", .15, null, i * .08)),
+    place: () => { tone(220, .16, "sine", .25, 110); noise(.05, .1); }, meow, purr: () => noise(1, .5, 24), hiss: () => noise(.45, .25),
+    eat: () => { for (let i = 0; i < 4; i++) setTimeout(() => noise(.04, .2), i * 120); },
+    adopt: () => [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => tone(f, .2, "sine", .15, null, i * .12)),
+    error: () => tone(180, .2, "square", .07), bell: () => { tone(1318, .3, "sine", .15); tone(1046, .6, "sine", .15, null, .3); },
+  };
+})();
+
+// ---------------- Icons (render 3D models to images) ----------------
+const icons = (() => {
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(160, 160);
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight("#fff6ea", "#b8aee0", .6)); const l = new THREE.DirectionalLight("#fff", .8); l.position.set(4, 10, -6); sc.add(l);
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 50); const cache = {};
+  function shot(obj, key) {
+    if (cache[key]) return cache[key]; sc.add(obj); const box = new THREE.Box3().setFromObject(obj), c = box.getCenter(new THREE.Vector3()), rad = Math.max(.25, box.getSize(new THREE.Vector3()).length() / 2);
+    Object.assign(cam, { left: -rad, right: rad, top: rad, bottom: -rad }); cam.updateProjectionMatrix();
+    cam.position.copy(c).add(new THREE.Vector3(9, 8, -11)); cam.lookAt(c); r.render(sc, cam); cache[key] = r.domElement.toDataURL(); sc.remove(obj); return cache[key];
+  }
+  return { item: def => shot(buildItemModel(def), def.id), cat: p => { const g = new THREE.Group(); const v = buildCatModel(p, 1); g.add(v.root); v.root.rotation.y = Math.PI + .55; return shot(g, "cat" + p); } };
+})();
+
+// ---------------- UI ----------------
+const ui = document.getElementById("ui"), fx = document.getElementById("fx");
+const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+const COIN_SVG = '<svg class="coin" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#ffc733" stroke="#b77a14" stroke-width="2"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#d9951d" stroke-width="2.5"/></svg>';
+const HEART_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28 4.5 16.6A7 7 0 0 1 16 7.4a7 7 0 0 1 11.5 9.2Z" fill="#ff8fae" stroke="#c9537a" stroke-width="2"/></svg>';
+const PAW_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="#ffa154"><ellipse cx="16" cy="21" rx="7.5" ry="6"/><ellipse cx="7" cy="13" rx="3.4" ry="4"/><ellipse cx="13" cy="8" rx="3.4" ry="4"/><ellipse cx="19" cy="8" rx="3.4" ry="4"/><ellipse cx="25" cy="13" rx="3.4" ry="4"/></g></svg>';
+let selected = null, editMode = false, toastEl = null, toastQ = [], toastT = 0;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function fmtDur(sec) { sec = Math.max(0, Math.round(sec)); const hh = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60; if (hh) return F("dur_h_m", hh, m); if (sec >= 120) return F("dur_m", m); return m + ":" + String(s).padStart(2, "0"); }
+function toast(msg) { toastQ.push(msg); if (toastQ.length > 4) toastQ.shift(); if (toastT <= 0) nextToast(); }
+function nextToast() { if (toastEl) toastEl.remove(); toastEl = null; const m = toastQ.shift(); if (!m) return; toastEl = h(`<div class="toast" role="status">${esc(m)}</div>`); ui.appendChild(toastEl); toastT = 2.8; }
+function btn(el, fn) { el.addEventListener("click", e => { e.stopPropagation(); sfx.unlock(); sfx.click(); fn(e); }); return el; }
+
+let hudEls = {};
+function buildUI() {
+  ui.innerHTML = ""; toastEl = null;
+  const hud = h(`<div id="hud">
+    <div class="pill">${COIN_SVG.replace('class="coin"', 'style="width:28px;height:28px"')}<span id="coins"></span></div>
+    <div class="pill">${HEART_SVG}<span id="comfort"></span></div>
+    <div class="pill">${PAW_SVG}<span id="catCount"></span></div></div>`);
+  ui.appendChild(hud);
+  ui.appendChild(btn(h(`<button id="settingsBtn">${T("settings")}</button>`), showSettings));
+  const bottom = h(`<div id="bottom"></div>`);
+  bottom.appendChild(btn(h(`<button class="big" style="--c:var(--orange)"><img alt="" src="${icons.item(ITEM.food_dry)}">${T("shop")}</button>`), () => showShop("furniture")));
+  bottom.appendChild(btn(h(`<button class="big" style="--c:var(--green)"><img alt="" src="${icons.item(ITEM.sofa)}">${T("decorate")}</button>`), enterEdit));
+  bottom.appendChild(btn(h(`<button class="big" style="--c:var(--blue)"><img alt="" src="${icons.cat(S.cats[0] ? S.cats[0].preset : 0)}">${T("my_cats")}</button>`), showCatsList));
+  ui.appendChild(bottom);
+  ui.appendChild(btn(h(`<button id="strayBtn" hidden>${T("stray_visit")}</button>`), () => stray && select(stray)));
+  hudEls = { coins: hud.querySelector("#coins"), comfort: hud.querySelector("#comfort"), cats: hud.querySelector("#catCount"), bottom, stray: ui.querySelector("#strayBtn") };
+  buildCatPanel(); buildDecor(); refreshHud();
+}
+function refreshHud() {
+  if (!hudEls.coins) return;
+  hudEls.coins.textContent = S.coins.toLocaleString();
+  hudEls.comfort.textContent = F("comfort", comfort(), comfortMult().toFixed(2));
+  hudEls.cats.textContent = cats.length + "/" + MAX_CATS;
+  const narrow = innerWidth <= 720 || innerHeight > innerWidth, panelOpen = !!selected;
+  hudEls.bottom.hidden = editMode || (narrow && panelOpen);
+  hudEls.stray.hidden = !(stray && !editMode && selected !== stray && !(narrow && panelOpen));
+}
+
+// ----- modal helpers -----
+function modal(cls, onBg) {
+  const bg = h(`<div class="modalBg"></div>`), card = h(`<div class="card ${cls}" role="dialog"></div>`); bg.appendChild(card); ui.appendChild(bg);
+  bg.addEventListener("click", e => { if (e.target === bg && onBg) onBg(); }); return { bg, card };
+}
+function closeBtn(card, fn) { card.appendChild(btn(h(`<button class="close" aria-label="${T("close")}">✕</button>`), fn)); }
+
+// ----- shop -----
+let shop = null;
+const TABS = [["furniture", "tab_furniture"], ["toy", "tab_toys"], ["food", "tab_food"], ["wall", "tab_wall"], ["floor", "tab_floor"]];
+function showShop(tab) {
+  closeShop(); closeCats();
+  const { bg, card } = modal("shop"); shop = { bg, card, tab };
+  card.innerHTML = `<h2>${T("shop")}</h2><div class="pill coinBox">${COIN_SVG}<span class="sc"></span></div><div class="tabs"></div><div class="grid"></div>`;
+  closeBtn(card, closeShop);
+  const tabs = card.querySelector(".tabs");
+  TABS.forEach(([id, key]) => tabs.appendChild(btn(h(`<button data-t="${id}">${T(key)}</button>`), () => { shop.tab = id; renderShop(); card.querySelector(".grid").scrollTop = 0; })));
+  renderShop();
+}
+function closeShop() { if (shop) shop.bg.remove(); shop = null; }
+function renderShop() {
+  if (!shop) return; const { card, tab } = shop;
+  card.querySelector(".sc").textContent = S.coins.toLocaleString();
+  card.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === tab));
+  const grid = card.querySelector(".grid"); grid.innerHTML = "";
+  for (const def of ITEMS.filter(i => i.cat === tab)) {
+    const owned = isTheme(def) ? 0 : count(def.id) + room.items.filter(i => i.def.id === def.id).length;
+    let info = esc(idesc(def)); if (placeable(def) && def.comfort) info += "<br>" + F("comfort_plus", def.comfort);
+    const el = h(`<div class="item"><div class="ic"><img alt="" src="${icons.item(def)}"></div><b>${esc(iname(def))}</b><small>${info}</small>${owned ? `<span class="badge">${F("owned_n", owned)}</span>` : ""}</div>`);
+    let b;
+    if (isTheme(def) && S.ownedThemes.includes(def.id)) {
+      const inUse = S.wallpaper === def.id || S.flooring === def.id;
+      b = btn(h(`<button style="--c:var(--blue)" ${inUse ? "disabled" : ""}>${T(inUse ? "in_use" : "use")}</button>`), () => { applyTheme(def); renderShop(); });
+    } else {
+      b = btn(h(`<button style="--c:${S.coins >= def.price ? "var(--green)" : "var(--gray)"}">${COIN_SVG}${def.price}</button>`), () => {
+        const r = buy(def); if (r === "poor") toast(T("not_enough"));
+        else if (r === "ok") { toast(placeable(def) ? F("bought_place", iname(def)) : isTheme(def) ? F("bought_theme", iname(def)) : F("bought", iname(def))); renderShop(); }
+      });
+    }
+    el.appendChild(b); grid.appendChild(el);
+  }
+}
+
+// ----- cat panel -----
+let cp = null;
+function buildCatPanel() {
+  const el = h(`<div id="catPanel" class="card" hidden>
+    <div class="head"><img alt=""><div style="min-width:0"><div class="name"></div><div class="breed"></div></div></div>
+    <div class="status"></div>
+    <div class="stats">
+      <div class="stat" data-k="hunger"><span>${T("hunger")}</span><div class="bar" style="--c:var(--orange)"><i></i></div></div>
+      <div class="stat" data-k="fun"><span>${T("fun")}</span><div class="bar" style="--c:var(--pink)"><i></i></div></div>
+      <div class="stat" data-k="energy"><span>${T("energy")}</span><div class="bar" style="--c:var(--blue)"><i></i></div></div>
+      <div class="stat" data-k="happy"><span>${T("happiness")}</span><div class="bar" style="--c:var(--gold)"><i></i></div></div>
+    </div>
+    <div class="stat" data-k="trust"><span>${T("trust")}</span><div class="bar" style="--c:#ff7399"><i></i></div></div>
+    <div class="extra" style="white-space:pre-line"></div>
+    <div class="actions"></div>
+  </div>`);
+  closeBtn(el, () => select(null));
+  const acts = el.querySelector(".actions");
+  acts.appendChild(btn(h(`<button style="--c:var(--orange)">${T("feed")}</button>`), showFoodPicker));
+  const petB = btn(h(`<button style="--c:var(--pink)">${T("pet")}</button>`), () => result(selected, selected && selected.pet()));
+  const playB = btn(h(`<button style="--c:var(--blue)">${T("play")}</button>`), () => result(selected, selected && selected.play()));
+  acts.append(petB, playB);
+  const adoptB = btn(h(`<button id="adoptBtn">${T("adopt")}</button>`), onAdopt);
+  const renameB = btn(h(`<button id="renameBtn">${T("rename")}</button>`), onRename);
+  el.append(adoptB, renameB); ui.appendChild(el);
+  cp = { el, img: el.querySelector(".head img"), name: el.querySelector(".name"), breed: el.querySelector(".breed"), status: el.querySelector(".status"), extra: el.querySelector(".extra"),
+    bars: Object.fromEntries([...el.querySelectorAll(".stat")].map(s => [s.dataset.k, s])), petB, playB, adoptB, renameB, shownPreset: -1 };
+}
+function updateCatPanel() {
+  if (!cp) return; const c = selected; cp.el.hidden = !c || editMode; if (cp.el.hidden) return;
+  if (cp.shownPreset !== c.d.preset) { cp.img.src = icons.cat(c.d.preset); cp.shownPreset = c.d.preset; }
+  cp.name.textContent = c.isStray ? T("stray_cat") : catName(c.d.nameIndex); cp.breed.textContent = presetName(c.d.preset); cp.status.textContent = c.status();
+  const set = (k, v) => { cp.bars[k].querySelector("i").style.width = clamp(v, 0, 100) + "%"; };
+  set("hunger", c.d.hunger); set("fun", c.d.fun); set("energy", c.d.energy); set("happy", c.happiness); set("trust", c.trust);
+  cp.bars.happy.hidden = c.isStray; cp.bars.trust.hidden = !c.isStray;
+  const fav = ITEM[c.d.favoriteFood];
+  if (c.isStray) cp.extra.textContent = (c.favKnown ? F("likes", iname(fav)) : T("likes_unknown")) + "\n" + (c.canAdopt ? T("adopt_ready") : F("stay_time", fmtDur(c.stay)));
+  else cp.extra.textContent = F("likes", iname(fav)) + "\n" + F("earning", Math.round(c.happiness));
+  cp.petB.disabled = c.petCd > 0; cp.playB.disabled = c.playCd > 0; cp.adoptB.hidden = !c.canAdopt; cp.renameB.hidden = c.isStray;
+}
+function result(c, r) {
+  if (!c || r === "ok") return; const n = c.isStray ? T("stray_cat") : catName(c.d.nameIndex);
+  toast({ full: F("res_full", n), cooldown: T("res_cooldown"), tired: F("res_tired", n), busy: T("res_busy"), hiss: F("res_hiss", n) }[r] || T("res_busy"));
+}
+function onAdopt() {
+  const c = selected; if (!c || !c.isStray) return;
+  if (cats.length >= MAX_CATS) return toast(F("room_full", MAX_CATS));
+  if (adopt()) { refreshHud(); popup(T("adopted_title"), F("adopted_body", catName(c.d.nameIndex)), icons.cat(c.d.preset), [[T("yay"), "var(--green)", null]]); }
+}
+function onRename() {
+  const c = selected; if (!c || c.isStray) return; let n = c.d.nameIndex;
+  for (let i = 0; i < 30; i++) { n = (n + 1) % NAMES.length; if (!cats.some(o => o !== c && o.d.nameIndex === n)) break; }
+  c.d.nameIndex = n; dirty(); sfx.meow(c.d.size);
+}
+function select(c) {
+  if (selected === c) return; selected = c; closeFood();
+  selRing.visible = !!c; if (c) { c.root.add(selRing); selRing.scale.set(c.d.size, c.d.size * .12, c.d.size); if (c.state !== "sleep") sfx.meow(c.d.size); } else scene.add(selRing);
+  updateCatPanel(); refreshHud();
+}
+const selRing = new THREE.Mesh(GEO.torus, toon("#ffd24d", .6)); selRing.position.y = .03; selRing.visible = false; scene.add(selRing);
+
+// ----- food picker -----
+let foodM = null;
+function showFoodPicker() {
+  if (!selected) return; closeFood(); const { bg, card } = modal("popup", closeFood); foodM = { bg, card };
+  card.style.width = "min(520px,100%)"; card.innerHTML = `<h2>${T("choose_food")}</h2><div class="list" style="width:100%"></div>`; closeBtn(card, closeFood); renderFood();
+}
+function closeFood() { if (foodM) foodM.bg.remove(); foodM = null; }
+function renderFood() {
+  if (!foodM || !selected) return; const c = selected, list = foodM.card.querySelector(".list"); list.innerHTML = "";
+  for (const f of ITEMS.filter(i => i.cat === "food")) {
+    const n = count(f.id), favTag = c.favKnown && c.d.favoriteFood === f.id ? T("favorite") + " " : "";
+    const row = h(`<div class="food"><img alt="" src="${icons.item(f)}"><div style="text-align:left;min-width:0"><b>${esc(iname(f))}</b><small>${favTag}${esc(idesc(f))} · x${n}</small></div></div>`);
+    const b = n > 0 ? btn(h(`<button style="--c:var(--green)">${T("give")}</button>`), () => feed(c, f))
+      : btn(h(`<button style="--c:${S.coins >= f.price ? "var(--orange)" : "var(--gray)"};display:flex;gap:4px;align-items:center">${T("buy_give")} ${COIN_SVG}${f.price}</button>`), () => { if (buy(f) === "ok") feed(c, f); else toast(T("not_enough")); });
+    row.appendChild(b); list.appendChild(row);
+  }
+}
+function feed(c, f) { const r = c.feed(f); if (r === "ok") { closeFood(); if (c.isStray && c.d.favoriteFood === f.id) toast(T("stray_loves_food")); } else result(c, r); refreshHud(); }
+
+// ----- cats list -----
+let catsM = null;
+function showCatsList() {
+  closeShop(); closeCats(); const { bg, card } = modal("shop", closeCats); catsM = { bg, card }; card.style.height = "auto";
+  card.innerHTML = `<h2>${F("my_cats_title", cats.length, MAX_CATS)}</h2><div class="grid"></div>`; closeBtn(card, closeCats);
+  const grid = card.querySelector(".grid");
+  for (const c of cats) grid.appendChild(btn(h(`<button class="catCard"><img alt="" src="${icons.cat(c.d.preset)}"><b>${esc(catName(c.d.nameIndex))}</b><small style="color:var(--ink-soft)">${esc(presetName(c.d.preset))}</small><div class="bar" style="--c:var(--gold);width:100%"><i style="width:${Math.round(c.happiness)}%"></i></div></button>`), () => { closeCats(); select(c); }));
+  if (cats.length < MAX_CATS) grid.appendChild(h(`<div class="item" style="justify-content:center;text-align:center;color:var(--ink-soft)">${T("adopt_hint")}</div>`));
+}
+function closeCats() { if (catsM) catsM.bg.remove(); catsM = null; }
+
+// ----- popups -----
+function popup(title, body, img, buttons) {
+  const { bg, card } = modal("popup"); card.innerHTML = `<h2 style="margin:0">${esc(title)}</h2>${img ? `<img alt="" src="${img}">` : ""}<p>${esc(body)}</p><div class="row"></div>`;
+  const row = card.querySelector(".row"); buttons.forEach(([label, color, fn]) => row.appendChild(btn(h(`<button style="--c:${color}">${esc(label)}</button>`), () => { bg.remove(); fn && fn(); })));
+}
+function showSettings() {
+  closeShop(); closeCats(); const { bg, card } = modal("popup", () => bg.remove());
+  card.innerHTML = `<h2 style="margin:0">${T("settings_title")}</h2>`; const col = h(`<div style="display:grid;gap:10px;width:100%"></div>`); card.appendChild(col);
+  col.appendChild(btn(h(`<button style="--c:var(--blue);padding:12px">${T("language_toggle")}</button>`), () => { bg.remove(); LANG = LANG === "th" ? "en" : "th"; S.language = LANG; dirty(); buildUI(); }));
+  const snd = btn(h(`<button style="--c:var(--orange);padding:12px">${T(S.soundOn ? "sound_on" : "sound_off")}</button>`), () => { S.soundOn = !S.soundOn; snd.textContent = T(S.soundOn ? "sound_on" : "sound_off"); dirty(); });
+  col.appendChild(snd);
+  col.appendChild(btn(h(`<button style="--c:var(--gray);padding:10px">${T("reset")}</button>`), () => { bg.remove();
+    popup(T("reset"), T("reset_confirm"), null, [[T("no"), "var(--green)", null], [T("yes"), "var(--pink)", () => { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} S = newSave(); S.language = LANG; boot(); }]]); }));
+  col.appendChild(btn(h(`<button style="--c:var(--green);padding:12px">${T("close")}</button>`), () => bg.remove()));
+  card.appendChild(h(`<small style="color:var(--ink-soft)">${T("preview_note")}</small>`));
+}
+
+// ---------------- Decorate mode ----------------
+const pl = { ghost: null, def: null, moving: null, rot: 0, cell: [0, 0], valid: false, offset: new THREE.Vector3() };
+const okMat = new THREE.MeshBasicMaterial({ color: "#73ff8c", transparent: true, opacity: .55, depthWrite: false });
+const badMat = new THREE.MeshBasicMaterial({ color: "#ff5959", transparent: true, opacity: .55, depthWrite: false });
+let decor = null;
+function buildDecor() {
+  const el = h(`<div id="decor" class="card" hidden><div class="top"><h2>${T("decor_title")}</h2><span class="hint"></span></div><div class="bag"></div><div class="acts"></div></div>`);
+  el.querySelector(".top").appendChild(btn(h(`<button style="--c:var(--green)">${T("done")}</button>`), exitEdit));
+  const acts = el.querySelector(".acts");
+  acts.appendChild(btn(h(`<button style="--c:var(--blue)">${T("rotate")}</button>`), rotateGhost));
+  const storeB = btn(h(`<button style="--c:var(--orange)">${T("store")}</button>`), storeMoving); acts.appendChild(storeB);
+  acts.appendChild(btn(h(`<button style="--c:var(--green)">${T("place_here")}</button>`), () => { if (!commit()) sfx.error(); }));
+  acts.appendChild(btn(h(`<button style="--c:var(--gray)">${T("cancel")}</button>`), cancelGhost));
+  ui.appendChild(el); decor = { el, hint: el.querySelector(".hint"), bag: el.querySelector(".bag"), acts, storeB }; refreshDecor();
+}
+function refreshDecor() {
+  if (!decor) return; decor.el.hidden = !editMode; refreshHud(); if (!editMode) return;
+  const holding = !!pl.ghost; decor.bag.hidden = holding; decor.acts.hidden = !holding; decor.storeB.hidden = !pl.moving;
+  decor.hint.textContent = T(holding ? "decor_place_hint" : "decor_hint"); if (holding) return;
+  decor.bag.innerHTML = ""; let shown = 0;
+  for (const def of ITEMS) { if (!placeable(def) || count(def.id) <= 0) continue; shown++;
+    decor.bag.appendChild(btn(h(`<button class="bagItem"><img alt="" src="${icons.item(def)}">${esc(iname(def))}<span class="badge">x${count(def.id)}</span></button>`), () => beginPlace(def))); }
+  decor.bag.appendChild(btn(h(`<button class="bagItem" style="--c:var(--orange);color:#fff;justify-content:center;min-height:110px">${T("buy_more")}</button>`), () => { exitEdit(); showShop("furniture"); }));
+  if (!shown) decor.hint.textContent = T("bag_empty");
+}
+function enterEdit() { closeShop(); closeCats(); select(null); editMode = true; room.grid.visible = true; refreshDecor(); }
+function exitEdit() { if (pl.moving) { if (pl.valid) commit(); else cancelGhost(); } cancelGhost(); editMode = false; room.grid.visible = false; refreshDecor(); }
+function makeGhost() {
+  destroyGhost(); pl.ghost = buildItemModel(pl.def);
+  pl.ghost.traverse(o => { if (o.isMesh) { if (o.userData.outline) o.visible = false; o.castShadow = false; } }); scene.add(pl.ghost);
+}
+function destroyGhost() { if (pl.ghost) scene.remove(pl.ghost); pl.ghost = null; }
+function updateGhost() {
+  if (!pl.ghost) return; pl.valid = canPlace(pl.def, pl.cell[0], pl.cell[1], pl.rot, pl.moving);
+  pl.ghost.position.copy(footCenter(pl.def, pl.cell[0], pl.cell[1], pl.rot)); pl.ghost.position.y = .02; pl.ghost.rotation.y = -pl.rot * Math.PI / 2;
+  const m = pl.valid ? okMat : badMat; pl.ghost.traverse(o => { if (o.isMesh && !o.userData.outline) o.material = m; });
+}
+function freeCell(def, r) {
+  const fw = footW(def, r), fd = footD(def, r); let best = [clamp(4 - (fw >> 1), 0, ROOM - fw), clamp(4 - (fd >> 1), 0, ROOM - fd)], bd = 1e9;
+  for (let x = 0; x <= ROOM - fw; x++) for (let z = 0; z <= ROOM - fd; z++) if (canPlace(def, x, z, r)) { const d = Math.hypot(x - 3.5, z - 3.5); if (d < bd) { bd = d; best = [x, z]; } }
+  return best;
+}
+function beginPlace(def) { cancelGhost(); pl.def = def; pl.rot = 0; pl.offset.set(0, 0, 0); makeGhost(); pl.cell = freeCell(def, 0); updateGhost(); refreshDecor(); }
+function beginMove(it) {
+  cancelGhost(); pl.moving = it; pl.def = it.def; pl.rot = it.rot; pl.cell = [it.x, it.z]; pl.offset.set(0, 0, 0);
+  if (it.occupant) it.occupant.dropToFloor(); it.obj.visible = false; makeGhost(); updateGhost(); sfx.pop(); refreshDecor();
+}
+function rotateGhost() { if (!pl.ghost) return; const c = footCenter(pl.def, pl.cell[0], pl.cell[1], pl.rot); pl.rot = (pl.rot + 1) % 4; pl.cell = cellFor(pl.def, pl.rot, c); updateGhost(); }
+function storeMoving() { if (!pl.moving) return; const def = pl.moving.def; pl.moving.obj.visible = true; removeItem(pl.moving); pl.moving = null; addItem(def.id); destroyGhost(); sfx.pop(); refreshDecor(); refreshHud(); }
+function cancelGhost() { if (pl.moving) { pl.moving.obj.visible = true; pl.moving = null; } destroyGhost(); refreshDecor(); }
+function commit() {
+  if (!pl.ghost || !pl.valid) return false;
+  if (pl.moving) { pl.moving.obj.visible = true; moveItem(pl.moving, pl.cell[0], pl.cell[1], pl.rot); pl.moving = null; }
+  else { if (!takeItem(pl.def.id)) { cancelGhost(); return false; } placeItem(pl.def, pl.cell[0], pl.cell[1], pl.rot); }
+  sfx.place(); destroyGhost(); refreshDecor(); refreshHud(); return true;
+}
+
+// ---------------- Input ----------------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let press = null; const pointers = new Map(); let pinchD = 0;
+function setRay(e) { const r = renderer.domElement.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); }
+function floorPoint(e) { setRay(e); const p = new THREE.Vector3(); return ray.ray.intersectPlane(floorPlane, p) ? p : null; }
+function pickItem(e) { setRay(e); let best = null, bd = 1e9; for (const hit of ray.intersectObjects(room.items.map(i => i.obj), true)) { let o = hit.object; while (o && !o.userData.item) o = o.parent; if (!o) continue; const it = o.userData.item, d = hit.distance + (it.def.flat ? 50 : 0); if (d < bd) { bd = d; best = it; } } return best; }
+function pickCat(e) { setRay(e); const all = cats.concat(stray ? [stray] : []); for (const hit of ray.intersectObjects(all.map(c => c.root), true)) { let o = hit.object; while (o && !o.userData.cat) o = o.parent; if (o) return o.userData.cat; } return null; }
+function followGhost(e) { const p = floorPoint(e); if (!p || p.x < -1 || p.z < -1 || p.x > ROOM + 1 || p.z > ROOM + 1) return; const c = cellFor(pl.def, pl.rot, p.add(pl.offset)); if (c[0] !== pl.cell[0] || c[1] !== pl.cell[1]) { pl.cell = c; updateGhost(); } }
+const cv = renderer.domElement;
+cv.addEventListener("pointerdown", e => {
+  sfx.unlock(); pointers.set(e.pointerId, e); cv.setPointerCapture(e.pointerId);
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinchD = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); press = null; return; }
+  press = { x: e.clientX, y: e.clientY };
+  if (editMode && !pl.ghost) { const it = pickItem(e); if (it) { beginMove(it); const p = floorPoint(e); if (p) pl.offset.copy(it.obj.position).sub(p); } }
+});
+cv.addEventListener("pointermove", e => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, e);
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); if (pinchD > 0) { zoom = clamp(zoom * pinchD / d, .65, 1.15); resize(); } pinchD = d; return; }
+  if (editMode && pl.ghost && (press || e.pointerType === "mouse")) followGhost(e);
+});
+function endPointer(e) {
+  pointers.delete(e.pointerId); if (pointers.size < 2) pinchD = 0; if (!press) return;
+  const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y), slop = Math.max(10, Math.min(innerWidth, innerHeight) * .03); press = null;
+  if (editMode) { if (!pl.ghost) return; if (pl.moving && moved < slop && pl.cell[0] === pl.moving.x && pl.cell[1] === pl.moving.z && pl.rot === pl.moving.rot) return; if (!commit()) sfx.error(); return; }
+  if (moved < slop) select(pickCat(e));
+}
+cv.addEventListener("pointerup", endPointer); cv.addEventListener("pointercancel", e => { pointers.delete(e.pointerId); press = null; });
+cv.addEventListener("wheel", e => { e.preventDefault(); zoom = clamp(zoom + Math.sign(e.deltaY) * .08, .65, 1.15); resize(); }, { passive: false });
+addEventListener("keydown", e => { if (!editMode) return; if (e.key === "r" || e.key === "R") rotateGhost(); if (e.key === "Escape") cancelGhost(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveNow(); });
+addEventListener("pagehide", saveNow);
+
+// ---------------- Floating labels (coins, thoughts, hearts) ----------------
+const bubbles = new Map(), tags = new Map(), effects = [];
+function toScreen(p) { const v = p.clone().project(camera), r = renderer.domElement.getBoundingClientRect(); return { x: (v.x + 1) / 2 * r.width + r.left, y: (1 - v.y) / 2 * r.height + r.top }; }
+function addCoinBubble(cat, n) {
+  let b = bubbles.get(cat);
+  if (b) { b.amount += n; b.age = Math.min(b.age, 7); b.el.querySelector("span").textContent = "+" + b.amount; return; }
+  b = { cat, amount: n, age: 0, el: h(`<button class="bubble">${COIN_SVG}<span>+${n}</span></button>`) };
+  b.el.addEventListener("pointerdown", e => e.stopPropagation());
+  b.el.addEventListener("click", e => { e.stopPropagation(); sfx.unlock(); collect(b, true); });
+  fx.appendChild(b.el); bubbles.set(cat, b); sfx.pop();
+}
+function collect(b, tapped) {
+  if (!bubbles.has(b.cat)) return; const total = tapped ? b.amount * 2 : b.amount; addCoins(total);
+  if (tapped) { sfx.coin(); const r = b.el.getBoundingClientRect(); floatText(r.left + r.width / 2, r.top, "+" + total + " x2!"); }
+  b.el.remove(); bubbles.delete(b.cat);
+}
+function spawnHearts(world, n) {
+  const s = toScreen(world);
+  for (let i = 0; i < n; i++) { const el = h(`<div class="heart" style="width:${rand(22, 34)}px">${HEART_SVG}</div>`); fx.appendChild(el);
+    effects.push({ el, x: s.x + rand(-26, 26), y: s.y + rand(-16, 4), vx: rand(-30, 30), vy: -rand(80, 140), life: 0, max: rand(1, 1.6) }); }
+}
+function floatText(x, y, text) { const el = h(`<div class="floatText">${esc(text)}</div>`); fx.appendChild(el); effects.push({ el, x, y, vx: 0, vy: -100, life: 0, max: 1.2 }); }
+function getTag(c) {
+  let t = tags.get(c); if (t) return t;
+  t = { th: h(`<div class="thought"></div>`), trust: h(`<div class="trust">${HEART_SVG.replace("<svg", '<svg style="width:20px;height:20px"')}<div class="bar" style="--c:#ff7399"><i></i></div></div>`), name: h(`<div class="tag"></div>`), last: null };
+  fx.append(t.th, t.trust, t.name); tags.set(c, t); return t;
+}
+function updateFloating(dt) {
+  const all = cats.concat(stray ? [stray] : []);
+  for (const c of all) {
+    const t = getTag(c), s = toScreen(c.headTop()), hide = editMode, th = c.thought, showT = !hide && th && !bubbles.has(c);
+    t.th.hidden = !showT;
+    if (showT) { t.th.style.left = s.x + 18 + "px"; t.th.style.top = s.y + "px";
+      if (t.last !== th) { t.last = th; t.th.innerHTML = th === "sleepy" ? "Zz" : th === "love" ? HEART_SVG.replace("<svg", '<svg style="width:30px;height:30px"') : `<img alt="" src="${icons.item(ITEM[th === "hungry" ? "food_bowl" : "toy_ball"])}">`; } }
+    t.trust.hidden = hide || !c.isStray; if (c.isStray) { t.trust.style.left = s.x + "px"; t.trust.style.top = s.y - 34 + "px"; t.trust.querySelector("i").style.width = c.trust + "%"; }
+    t.name.hidden = hide || selected !== c; if (selected === c) { t.name.textContent = c.isStray ? T("stray_cat") : catName(c.d.nameIndex); t.name.style.left = s.x + "px"; t.name.style.top = s.y - (c.isStray ? 64 : 30) + "px"; }
+  }
+  for (const [c, t] of tags) if (!all.includes(c)) { t.th.remove(); t.trust.remove(); t.name.remove(); tags.delete(c); }
+  for (const b of [...bubbles.values()]) {
+    const alive = all.includes(b.cat); b.age += dt;
+    if (!alive) { addCoins(b.amount); b.el.remove(); bubbles.delete(b.cat); continue; }
+    const s = toScreen(b.cat.headTop()); b.el.hidden = editMode; b.el.style.left = s.x + "px"; b.el.style.top = s.y - 4 + "px";
+    if (b.age > 14) collect(b, false);
+  }
+  for (let i = effects.length - 1; i >= 0; i--) { const f = effects[i]; f.life += dt; if (f.life >= f.max) { f.el.remove(); effects.splice(i, 1); continue; }
+    f.x += f.vx * dt; f.y += f.vy * dt; f.el.style.left = f.x + "px"; f.el.style.top = f.y + "px"; f.el.style.opacity = 1 - clamp((f.life - f.max / 2) / (f.max / 2), 0, 1); }
+}
+
+// ---------------- Boot & loop ----------------
+function clearWorld() {
+  for (const c of cats) scene.remove(c.root); cats.length = 0; if (stray) scene.remove(stray.root); stray = null;
+  for (const it of [...room.items]) room.group.remove(it.obj); room.items.length = 0;
+  for (const b of bubbles.values()) b.el.remove(); bubbles.clear(); for (const t of tags.values()) { t.th.remove(); t.trust.remove(); t.name.remove(); } tags.clear();
+  selected = null; editMode = false; destroyGhost(); pl.moving = null;
+}
+function boot() {
+  clearWorld();
+  LANG = S.language || ((navigator.language || "th").toLowerCase().startsWith("th") ? "th" : "en");
+  applyWall(ITEM[S.wallpaper] || ITEM.wall_cream); applyFloor(ITEM[S.flooring] || ITEM.floor_wood);
+  for (const p of S.placed) { const d = ITEM[p.id]; if (!d || !placeable(d)) continue; if (canPlace(d, p.x, p.z, p.rot)) placeItem(d, p.x, p.z, p.rot); else addItem(d.id); }
+  for (const d of S.cats) cats.push(new Cat(d, false, clampFloor(new THREE.Vector3(d.posX, 0, d.posZ))));
+  strayTimer = 35; buildUI(); resize();
+  // offline earnings (25%, up to 3 hours)
+  if (S.lastSave > 0) {
+    const el = clamp((Date.now() - S.lastSave) / 1000, 0, 3 * 3600);
+    if (el >= 120) { let earned = 0; for (const c of cats) { const per = (2 + 8 * Math.pow(c.happiness / 100, 1.5)) * comfortMult(); earned += Math.round(per * el / 10 * .25);
+        c.d.hunger = Math.max(15, c.d.hunger - .045 * el); c.d.fun = Math.max(20, c.d.fun - .05 * el); c.d.energy = Math.max(c.d.energy, 75); }
+      if (earned > 0) { addCoins(earned); popup(T("welcome_back"), F("welcome_body", earned.toLocaleString(), fmtDur(el)), icons.item(ITEM.bed_donut), [[T("yay"), "var(--green)", null]]); } }
+  }
+  if (!S.tutorialDone) popup(T("tutorial_title"), T("tutorial_body"), icons.cat(0), [[T("lets_go"), "var(--green)", () => { S.tutorialDone = true; dirty(); }]]);
+  saveNow();
+}
+buildShell();
+boot();
+document.getElementById("loading").remove();
+
+let last = performance.now(), hudT = 0;
+function frame(nowMs) {
+  const dt = Math.min(.1, (nowMs - last) / 1000); last = nowMs; const now = nowMs / 1000;
+  for (const c of cats) c.update(dt, now); if (stray) stray.update(dt, now);
+  if (!stray && cats.length < MAX_CATS) { strayTimer -= dt; if (strayTimer <= 0) spawnStray(); }
+  room.doorTimer -= dt; room.doorAngle += clamp((room.doorTimer > 0 ? -80 : 0) - room.doorAngle, -220 * dt, 220 * dt); room.door.rotation.y = room.doorAngle * D2R;
+  scene.traverse(o => { if (o.userData.spin) o.rotation.y += o.userData.spin * dt; if (o.userData.spinZ) o.rotation.z += o.userData.spinZ * dt; });
+  selRing.rotation.y += dt * .7;
+  updateFloating(dt); updateCatPanel();
+  hudT -= dt; if (hudT <= 0) { hudT = .25; refreshHud(); if (shop) shop.card.querySelector(".sc").textContent = S.coins.toLocaleString(); }
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) nextToast(); }
+  saveTimer += dt; if ((saveDirty && saveTimer > 5) || saveTimer > 30) saveNow();
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__cozy = { S, cats: () => cats, spawnStray, select, get stray() { return stray; }, showShop, enterEdit };
+</script>
