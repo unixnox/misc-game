@@ -1,0 +1,19 @@
+# Unity
+CatRoom/[Ll]ibrary/
+CatRoom/[Tt]emp/
+CatRoom/[Oo]bj/
+CatRoom/[Bb]uild/
+CatRoom/[Bb]uilds/
+CatRoom/[Ll]ogs/
+CatRoom/[Uu]ser[Ss]ettings/
+CatRoom/MemoryCaptures/
+CatRoom/*.csproj
+CatRoom/*.sln
+CatRoom/*.user
+CatRoom/.vs/
+CatRoom/.idea/
+CatRoom/.vscode/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+.DS_Store

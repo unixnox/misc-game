@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <!-- YouTube Playables SDK. Must be loaded before the game starts. -->
+    <script src="https://www.youtube.com/game_api/v1"></script>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #c7dbfa; touch-action: none; }
+      #unity-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: #c7dbfa; outline: none; }
+      #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                 background: #c7dbfa; font-family: system-ui, sans-serif; color: #553a2e; gap: 18px; }
+      #loading .cat { width: 96px; height: 80px; position: relative; animation: bob 1s ease-in-out infinite; }
+      #loading .head { position: absolute; left: 8px; top: 16px; width: 80px; height: 64px; border-radius: 50%; background: #ffa94d; border: 4px solid #4d3328; box-sizing: border-box; }
+      #loading .ear { position: absolute; top: 0; width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-bottom: 28px solid #4d3328; }
+      #loading .ear.l { left: 10px; transform: rotate(-12deg); } #loading .ear.r { right: 10px; transform: rotate(12deg); }
+      #loading .eye { position: absolute; top: 40px; width: 10px; height: 14px; border-radius: 50%; background: #4d3328; }
+      #loading .eye.l { left: 30px; } #loading .eye.r { right: 30px; }
+      #bar { width: 220px; height: 16px; border-radius: 8px; background: #fff7ec; border: 3px solid #4d3328; overflow: hidden; }
+      #fill { width: 0%; height: 100%; background: #ff9f5a; transition: width .2s; }
+      #error { display: none; max-width: 80%; text-align: center; }
+      @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    </style>
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="loading">
+      <div class="cat"><div class="ear l"></div><div class="ear r"></div><div class="head"></div><div class="eye l"></div><div class="eye r"></div></div>
+      <div id="bar"><div id="fill"></div></div>
+      <div id="error"></div>
+    </div>
+    <script>
+      var inPlayables = (typeof ytgame !== 'undefined' && ytgame.IN_PLAYABLES_ENV);
+
+      // The loading screen is our first frame: tell YouTube as soon as it is on screen.
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          if (inPlayables) { try { ytgame.game.firstFrameReady(); } catch (e) { console.warn(e); } }
+        });
+      });
+
+      document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+      var canvas = document.querySelector("#unity-canvas");
+      var config = {
+        arguments: [],
+        dataUrl: "Build/{{{ DATA_FILENAME }}}",
+        frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_THREADS
+        workerUrl: "Build/{{{ WORKER_FILENAME }}}",
+#endif
+#if USE_WASM
+        codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if MEMORY_FILENAME
+        memoryUrl: "Build/{{{ MEMORY_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      };
+
+      var script = document.createElement("script");
+      script.src = "Build/{{{ LOADER_FILENAME }}}";
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          document.querySelector("#fill").style.width = Math.round(progress * 100) + "%";
+        }).then(function () {
+          document.querySelector("#loading").style.display = "none";
+          canvas.focus();
+        }).catch(function (message) {
+          var el = document.querySelector("#error");
+          el.style.display = "block";
+          el.textContent = message;
+          if (inPlayables) { try { ytgame.health.logError(String(message)); } catch (e) { } }
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
